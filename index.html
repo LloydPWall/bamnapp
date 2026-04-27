@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#1a1a1a"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="BamnApp"/>
+<title>BamnApp</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+:root{
+  --ink:#1a1a1a;
+  --ink2:#3d3d3d;
+  --ink3:#6b6b6b;
+  --paper:#f5f0e8;
+  --paper2:#ede8df;
+  --paper3:#e2dcd2;
+  --yolk:#d4a017;
+  --yolk-light:#f0d060;
+  --yolk-pale:#fdf4d0;
+  --yolk-dim:#a07a0a;
+  --warn:#c0451a;
+  --warn-pale:#faeae4;
+  --ok:#2a6e3f;
+  --ok-pale:#e4f0e8;
+  --radius:14px;
+  --radius-sm:8px;
+  --sans:'DM Sans',sans-serif;
+  --serif:'DM Serif Display',serif;
+}
+
+html,body{
+  height:100%;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.5;
+  overscroll-behavior:none;
+}
+
+/* ── LAYOUT ── */
+#app{display:flex;flex-direction:column;min-height:100dvh;max-width:480px;margin:0 auto;position:relative}
+#screen-wrap{flex:1;overflow-y:auto;padding-bottom:80px}
+.screen{display:none;padding:0 20px 24px}
+.screen.active{display:block}
+
+/* ── NAV ── */
+nav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;
+  background:var(--ink);
+  display:flex;border-top:2px solid var(--yolk);
+  z-index:100;padding-bottom:env(safe-area-inset-bottom,0px);
+}
+nav button{
+  flex:1;background:none;border:none;color:#888;
+  padding:14px 4px 10px;font-family:var(--sans);font-size:11px;font-weight:500;
+  letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  transition:color 0.15s;
+}
+nav button svg{width:20px;height:20px;stroke-width:1.8}
+nav button.active{color:var(--yolk-light)}
+nav button:active{opacity:0.7}
+
+/* ── HEADER ── */
+.page-header{padding:28px 0 16px}
+.page-header h1{font-family:var(--serif);font-size:26px;font-weight:400;color:var(--ink);line-height:1.1}
+.page-header p{font-size:13px;color:var(--ink3);margin-top:4px}
+.wordmark{font-family:var(--serif);font-size:22px;letter-spacing:0.01em;color:var(--yolk)}
+
+/* ── CARDS ── */
+.card{
+  background:#fff;border:1px solid var(--paper3);
+  border-radius:var(--radius);padding:18px;margin-bottom:12px;
+}
+.card-label{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.card-value{font-family:var(--serif);font-size:32px;color:var(--ink);line-height:1}
+.card-sub{font-size:13px;color:var(--ink3);margin-top:4px}
+
+.card.warn{background:var(--warn-pale);border-color:#e8b8a8}
+.card.ok{background:var(--ok-pale);border-color:#b8d8c4}
+.card.accent{background:var(--yolk-pale);border-color:#e8d890}
+
+/* ── CLOCK BUTTON ── */
+#clock-btn-wrap{padding:24px 0 8px;display:flex;justify-content:center}
+#clock-btn{
+  width:180px;height:180px;border-radius:50%;border:3px solid var(--ink);
+  background:var(--ink);color:var(--yolk-light);
+  font-family:var(--serif);font-size:22px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  transition:transform 0.12s,box-shadow 0.12s,background 0.2s,border-color 0.2s;
+  box-shadow:0 4px 24px rgba(0,0,0,0.18);
+  position:relative;overflow:hidden;
+}
+#clock-btn.clocked-in{background:var(--paper);color:var(--ink);border-color:var(--yolk)}
+#clock-btn svg{width:32px;height:32px;stroke-width:1.5;transition:transform 0.2s}
+#clock-btn:active{transform:scale(0.95);box-shadow:0 2px 12px rgba(0,0,0,0.12)}
+#clock-btn-label{font-size:13px;opacity:0.7;font-family:var(--sans);font-weight:300;letter-spacing:0.03em}
+#live-time{font-family:var(--sans);font-size:13px;font-weight:300;letter-spacing:0.04em;opacity:0.6;text-align:center;margin-bottom:4px}
+
+/* ── SHIFT DURATION ── */
+#current-shift-info{text-align:center;padding:8px 0 20px;font-size:14px;color:var(--ink3);min-height:28px}
+#current-shift-info strong{color:var(--yolk-dim);font-weight:500}
+
+/* ── STATS GRID ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat-tile{background:#fff;border:1px solid var(--paper3);border-radius:var(--radius-sm);padding:14px;text-align:center}
+.stat-tile .lbl{font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.stat-tile .val{font-family:var(--serif);font-size:24px;color:var(--ink)}
+.stat-tile .unit{font-size:11px;color:var(--ink3)}
+
+/* ── SHIFTS LIST ── */
+.shifts-filter{display:flex;gap:6px;flex-wrap:wrap;padding:12px 0;overflow-x:auto;scrollbar-width:none}
+.shifts-filter::-webkit-scrollbar{display:none}
+.filter-btn{
+  background:none;border:1px solid var(--paper3);border-radius:20px;
+  padding:6px 14px;font-family:var(--sans);font-size:12px;font-weight:500;
+  color:var(--ink3);cursor:pointer;white-space:nowrap;transition:all 0.12s;
+}
+.filter-btn.active{background:var(--ink);color:var(--yolk-light);border-color:var(--ink)}
+.filter-btn:active{opacity:0.7}
+
+.shift-item{
+  background:#fff;border:1px solid var(--paper3);border-radius:var(--radius-sm);
+  padding:14px 16px;margin-bottom:8px;
+}
+.shift-item.flagged{border-left:3px solid var(--warn);background:var(--warn-pale)}
+.shift-item.manual{border-left:3px solid var(--yolk);background:var(--yolk-pale)}
+.shift-item.corrected{border-left:3px solid #5a7abf;background:#eef1fa}
+.shift-date{font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.shift-times{font-size:15px;color:var(--ink);margin-bottom:2px}
+.shift-hours{font-family:var(--serif);font-size:20px;color:var(--ink)}
+.shift-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tag{font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:var(--paper2);color:var(--ink3)}
+.tag.warn{background:#f8d8cc;color:#8b3010}
+.tag.info{background:#dde6f8;color:#2a4a8b}
+.tag.manual{background:#fdefc0;color:#7a5500}
+.shift-actions{display:flex;gap:8px;margin-top:10px}
+.btn-small{
+  font-family:var(--sans);font-size:12px;font-weight:500;padding:6px 12px;
+  border-radius:var(--radius-sm);cursor:pointer;border:1px solid var(--paper3);
+  background:var(--paper);color:var(--ink);transition:all 0.1s;
+}
+.btn-small:active{opacity:0.7}
+.btn-small.primary{background:var(--ink);color:var(--yolk-light);border-color:var(--ink)}
+
+/* ── FORMS ── */
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink3);display:block;margin-bottom:6px}
+.form-input{
+  width:100%;padding:12px 14px;border:1px solid var(--paper3);border-radius:var(--radius-sm);
+  font-family:var(--sans);font-size:15px;color:var(--ink);background:#fff;
+  outline:none;transition:border-color 0.15s;
+}
+.form-input:focus{border-color:var(--yolk)}
+textarea.form-input{resize:vertical;min-height:80px}
+.form-hint{font-size:12px;color:var(--ink3);margin-top:4px}
+
+.btn-primary{
+  width:100%;padding:16px;background:var(--ink);color:var(--yolk-light);
+  border:none;border-radius:var(--radius);font-family:var(--serif);font-size:18px;
+  cursor:pointer;transition:opacity 0.15s;
+}
+.btn-primary:active{opacity:0.8}
+.btn-secondary{
+  width:100%;padding:14px;background:none;color:var(--ink3);
+  border:1px solid var(--paper3);border-radius:var(--radius);font-family:var(--sans);font-size:14px;
+  cursor:pointer;margin-top:10px;transition:all 0.12s;
+}
+.btn-secondary:active{opacity:0.7}
+.btn-danger{
+  width:100%;padding:14px;background:none;color:var(--warn);
+  border:1px solid #e8b8a8;border-radius:var(--radius);font-family:var(--sans);font-size:14px;
+  cursor:pointer;margin-top:10px;
+}
+
+/* ── MODAL ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(26,26,26,0.6);
+  z-index:200;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(2px);
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:var(--paper);border-radius:var(--radius) var(--radius) 0 0;
+  padding:24px 20px 40px;width:100%;max-width:480px;
+  max-height:90dvh;overflow-y:auto;
+  animation:slideUp 0.25s ease;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;background:var(--paper3);border-radius:2px;margin:0 auto 20px;display:block}
+.modal-title{font-family:var(--serif);font-size:22px;margin-bottom:18px;color:var(--ink)}
+
+/* ── ONBOARDING ── */
+#onboarding{
+  position:fixed;inset:0;background:var(--ink);
+  z-index:300;overflow-y:auto;
+  padding:40px 24px 60px;display:flex;flex-direction:column;
+}
+.onboard-logo{font-family:var(--serif);font-size:40px;color:var(--yolk-light);margin-bottom:8px}
+.onboard-sub{font-size:13px;color:#888;margin-bottom:32px;letter-spacing:0.04em}
+.onboard-section{margin-bottom:24px}
+.onboard-section h3{font-family:var(--serif);font-size:18px;color:var(--yolk-light);margin-bottom:8px}
+.onboard-section p{font-size:14px;color:#bbb;line-height:1.7}
+.onboard-section ul{font-size:14px;color:#bbb;line-height:1.7;padding-left:20px}
+.onboard-section li{margin-bottom:4px}
+.onboard-warn{background:rgba(212,160,23,0.12);border:1px solid rgba(212,160,23,0.3);border-radius:var(--radius-sm);padding:14px;margin-bottom:28px}
+.onboard-warn p{font-size:13px;color:#d4a017;line-height:1.6}
+.onboard-btn{
+  background:var(--yolk);color:var(--ink);border:none;border-radius:var(--radius);
+  padding:18px;font-family:var(--serif);font-size:20px;cursor:pointer;width:100%;
+  margin-top:auto;
+}
+
+/* ── EXPORT ── */
+.export-section{margin-bottom:20px}
+.export-section h3{font-family:var(--serif);font-size:18px;margin-bottom:12px}
+.date-range{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── AUDIT TRAIL ── */
+.audit-item{border-top:1px solid var(--paper3);padding:10px 0;font-size:13px;color:var(--ink3)}
+.audit-item:first-child{border-top:none}
+.audit-item strong{color:var(--ink);font-weight:500}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:40px 20px;color:var(--ink3)}
+.empty svg{width:48px;height:48px;margin:0 auto 12px;display:block;opacity:0.3}
+.empty p{font-size:14px}
+
+/* ── DIVIDER ── */
+.section-title{font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);padding:16px 0 8px;border-top:1px solid var(--paper3);margin-top:8px}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);
+  background:var(--ink);color:var(--yolk-light);padding:12px 20px;border-radius:var(--radius);
+  font-size:14px;z-index:400;transition:transform 0.3s;white-space:nowrap;
+  box-shadow:0 4px 20px rgba(0,0,0,0.3);
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── INFO SCREEN ── */
+.info-block{background:#fff;border:1px solid var(--paper3);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px}
+.info-block h3{font-family:var(--serif);font-size:17px;margin-bottom:8px;color:var(--ink)}
+.info-block p,.info-block li{font-size:13px;color:var(--ink3);line-height:1.7}
+.info-block ul{padding-left:18px}
+.version-tag{font-size:11px;color:var(--ink3);text-align:center;padding:16px 0 4px;letter-spacing:0.06em}
+</style>
+</head>
+<body>
+
+<!-- ONBOARDING -->
+<div id="onboarding">
+  <div class="onboard-logo">BamnApp</div>
+  <div class="onboard-sub">Before you begin — please read this</div>
+
+  <div class="onboard-section">
+    <h3>What this app is</h3>
+    <p>BamnApp is an informal, employee-facing shift tracker. It is <strong style="color:#d4a017">not</strong> the official company clock-in or payroll system. It is a personal tool to help you track your own hours and identify any discrepancies with central records.</p>
+  </div>
+
+  <div class="onboard-section">
+    <h3>What data is stored</h3>
+    <ul>
+      <li>Your clock-in and clock-out times</li>
+      <li>Any manual corrections you make, including the original timestamps</li>
+      <li>Correction reasons you enter</li>
+    </ul>
+  </div>
+
+  <div class="onboard-section">
+    <h3>Who can see your data</h3>
+    <p>Nobody. Your data is stored <strong style="color:#d4a017">only on this device</strong>, in your browser. No data is sent to any server. No one else can access it.</p>
+  </div>
+
+  <div class="onboard-section">
+    <h3>Data retention</h3>
+    <p>Your data is kept for <strong style="color:#d4a017">one month only</strong>. Shifts older than 30 days are automatically removed. If you need to raise a correction or discrepancy, you must do so within this window. After that, contact your manager directly.</p>
+  </div>
+
+  <div class="onboard-section">
+    <h3>Disputes and corrections</h3>
+    <p>You can freely correct any of your own shift records. The original timestamp is always preserved. Export your data as a CSV and share it with your manager if you need to raise a discrepancy.</p>
+  </div>
+
+  <div class="onboard-warn">
+    <p>⚠ Your data exists only on this device and browser. If you clear your browser storage, uninstall the app, or switch devices, your shift history will be lost. Export your CSV regularly as a backup.</p>
+  </div>
+
+  <div style="text-align:center;margin-bottom:20px;padding-top:8px">
+    <p style="font-size:12px;color:#666;letter-spacing:0.04em">Designed by <strong style="color:#999;font-weight:500">Lloyd Wall</strong></p>
+    <p style="font-size:11px;color:#555;margin-top:4px;letter-spacing:0.03em">© 2025 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
+  </div>
+  <button class="onboard-btn" onclick="acknowledgeOnboarding()">I understand — take me to the app</button>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- APP -->
+<div id="app">
+  <div id="screen-wrap">
+
+    <!-- HOME -->
+    <div id="screen-home" class="screen active">
+      <div class="page-header">
+        <div class="wordmark">BamnApp</div>
+        <p id="home-date"></p>
+      </div>
+
+      <div id="clock-btn-wrap">
+        <button id="clock-btn" onclick="handleClockBtn()">
+          <svg id="clock-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span id="clock-btn-text">Clock In</span>
+          <span id="clock-btn-label">tap to start shift</span>
+        </button>
+      </div>
+
+      <div id="live-time"></div>
+      <div id="current-shift-info"></div>
+
+      <div class="stats-grid">
+        <div class="stat-tile">
+          <div class="lbl">Today</div>
+          <div class="val" id="stat-today">0.00</div>
+          <div class="unit">hrs</div>
+        </div>
+        <div class="stat-tile">
+          <div class="lbl">This week</div>
+          <div class="val" id="stat-week">0.00</div>
+          <div class="unit">hrs</div>
+        </div>
+        <div class="stat-tile">
+          <div class="lbl">This month</div>
+          <div class="val" id="stat-month">0.00</div>
+          <div class="unit">hrs</div>
+        </div>
+        <div class="stat-tile">
+          <div class="lbl">All time</div>
+          <div class="val" id="stat-all">0.00</div>
+          <div class="unit">hrs</div>
+        </div>
+      </div>
+
+      <div id="flags-container"></div>
+
+    </div>
+
+    <!-- SHIFTS -->
+    <div id="screen-shifts" class="screen">
+      <div class="page-header">
+        <h1>Shifts</h1>
+      </div>
+      <div class="shifts-filter">
+        <button class="filter-btn active" data-filter="all" onclick="setFilter(this,'all')">All</button>
+        <button class="filter-btn" data-filter="today" onclick="setFilter(this,'today')">Today</button>
+        <button class="filter-btn" data-filter="yesterday" onclick="setFilter(this,'yesterday')">Yesterday</button>
+        <button class="filter-btn" data-filter="week" onclick="setFilter(this,'week')">This week</button>
+        <button class="filter-btn" data-filter="lastweek" onclick="setFilter(this,'lastweek')">Last week</button>
+        <button class="filter-btn" data-filter="month" onclick="setFilter(this,'month')">This month</button>
+        <button class="filter-btn" data-filter="lastmonth" onclick="setFilter(this,'lastmonth')">Last month</button>
+      </div>
+      <div id="shifts-list"></div>
+      <button class="btn-secondary" style="margin-top:4px" onclick="openAddRecord()">+ Add a record manually</button>
+    </div>
+
+    <!-- EXPORT -->
+    <div id="screen-export" class="screen">
+      <div class="page-header">
+        <h1>Export</h1>
+        <p>Download your shift data as a CSV</p>
+      </div>
+      <div class="export-section">
+        <h3>Date range</h3>
+        <div class="date-range">
+          <div class="form-group">
+            <label class="form-label">From</label>
+            <input class="form-input" type="date" id="export-from"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">To</label>
+            <input class="form-input" type="date" id="export-to"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="btn-small" onclick="setExportRange('week')">This week</button>
+          <button class="btn-small" onclick="setExportRange('lastweek')">Last week</button>
+          <button class="btn-small" onclick="setExportRange('month')">This month</button>
+          <button class="btn-small" onclick="setExportRange('lastmonth')">Last month</button>
+          <button class="btn-small" onclick="setExportRange('all')">All time</button>
+        </div>
+        <button class="btn-primary" onclick="exportCSV()">Download CSV</button>
+      </div>
+
+      <div class="section-title">Preview</div>
+      <div id="export-preview" style="font-size:12px;color:var(--ink3);word-break:break-all;background:#fff;border:1px solid var(--paper3);border-radius:var(--radius-sm);padding:12px;min-height:60px;font-family:monospace;white-space:pre-wrap;line-height:1.6"></div>
+    </div>
+
+    <!-- INFO -->
+    <div id="screen-info" class="screen">
+      <div class="page-header">
+        <h1>About</h1>
+      </div>
+
+      <div class="info-block">
+        <h3>What BamnApp is</h3>
+        <p>An informal, employee-facing shift tracker. Not the official payroll or HR record. Use it to track your own hours and raise discrepancies with your manager.</p>
+      </div>
+      <div class="info-block">
+        <h3>Your data</h3>
+        <ul>
+          <li>Stored only on this device, in your browser</li>
+          <li>Not sent to any server</li>
+          <li>Kept for 30 days — shifts older than that are removed automatically</li>
+          <li>Lost if you clear browser storage or switch devices</li>
+        </ul>
+      </div>
+      <div class="info-block">
+        <h3>Corrections</h3>
+        <p>You can correct any shift freely. Original timestamps are always preserved alongside corrections. Export a CSV to share with your manager.</p>
+      </div>
+      <div class="info-block" style="background:var(--warn-pale);border-color:#e8b8a8">
+        <h3 style="color:var(--warn)">Important</h3>
+        <p style="color:#8b3010">Export your CSV regularly. If you lose your device data, there is no way to recover it.</p>
+      </div>
+
+      <div class="section-title">Data</div>
+      <button class="btn-secondary" onclick="confirmClearData()">Clear all my data</button>
+
+      <div class="version-tag">BamnApp v1.0.0</div>
+      <div style="text-align:center;padding-bottom:20px">
+        <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
+        <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2025 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- NAV -->
+  <nav>
+    <button class="active" onclick="showScreen('home',this)" id="nav-home">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button onclick="showScreen('shifts',this)" id="nav-shifts">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Shifts
+    </button>
+    <button onclick="showScreen('export',this)" id="nav-export">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export
+    </button>
+    <button onclick="showScreen('info',this)" id="nav-info">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      About
+    </button>
+  </nav>
+</div>
+
+<!-- CORRECTION MODAL -->
+<div class="modal-overlay" id="modal-correct">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-title">Correct shift</div>
+    <input type="hidden" id="correct-shift-id"/>
+    <div class="form-group">
+      <label class="form-label">Corrected clock-in</label>
+      <input class="form-input" type="datetime-local" id="correct-in"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Corrected clock-out</label>
+      <input class="form-input" type="datetime-local" id="correct-out"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reason for correction <span style="color:var(--warn)">*</span></label>
+      <textarea class="form-input" id="correct-reason" placeholder="Briefly explain why you're correcting this shift…"></textarea>
+    </div>
+    <div id="correct-original" style="font-size:12px;color:var(--ink3);margin-bottom:16px;line-height:1.7"></div>
+    <button class="btn-primary" onclick="saveCorrection()">Save correction</button>
+    <button class="btn-secondary" onclick="closeModal('modal-correct')">Cancel</button>
+  </div>
+</div>
+
+<!-- ADD RECORD MODAL -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-title">Add a shift record</div>
+    <p style="font-size:13px;color:var(--ink3);margin-bottom:18px">Use this when you forgot to use the app. No original timestamp will exist — your entered times will be the record.</p>
+    <div class="form-group">
+      <label class="form-label">Clock-in time</label>
+      <input class="form-input" type="datetime-local" id="add-in"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Clock-out time</label>
+      <input class="form-input" type="datetime-local" id="add-out"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Note (optional)</label>
+      <textarea class="form-input" id="add-note" placeholder="e.g. Forgot to use the app this day"></textarea>
+    </div>
+    <button class="btn-primary" onclick="saveManualRecord()">Add record</button>
+    <button class="btn-secondary" onclick="closeModal('modal-add')">Cancel</button>
+  </div>
+</div>
+
+<!-- AUDIT MODAL -->
+<div class="modal-overlay" id="modal-audit">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-title">Audit trail</div>
+    <div id="audit-content"></div>
+    <button class="btn-secondary" onclick="closeModal('modal-audit')">Close</button>
+  </div>
+</div>
+
+<script>
+// ── TIMEZONE UTILS ──
+const TZ = 'Europe/Berlin';
+
+function nowBerlin(){return new Date()}
+
+function toBerlinISO(date){
+  // Returns YYYY-MM-DDTHH:MM in Berlin time for datetime-local inputs
+  const d = new Date(date);
+  const fmt = new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+  return fmt.format(d).replace(' ','T');
+}
+
+function fmtDateTime(ts){
+  if(!ts) return '—';
+  return new Intl.DateTimeFormat('en-GB',{timeZone:TZ,day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts)).replace(',','');
+}
+
+function fmtDate(ts){
+  if(!ts) return '—';
+  return new Intl.DateTimeFormat('en-GB',{timeZone:TZ,day:'2-digit',month:'2-digit',year:'2-digit'}).format(new Date(ts));
+}
+
+function fmtTime(ts){
+  if(!ts) return '—';
+  return new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts));
+}
+
+function hoursDecimal(msec){
+  return (msec/3600000).toFixed(2);
+}
+
+function shiftDurationMs(shift){
+  const out = shift.correctedOut || shift.clockedOut;
+  const inn = shift.correctedIn || shift.clockedIn;
+  if(!inn || !out) return 0;
+  return new Date(out) - new Date(inn);
+}
+
+// Returns start of Berlin day for a given timestamp
+function berlinDayStart(ts){
+  const d = new Date(ts);
+  const str = new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+  return new Date(str+'T00:00:00'+berlinOffset(d));
+}
+
+function berlinOffset(d){
+  const utc = d.getTime();
+  const berlinStr = new Intl.DateTimeFormat('en-CA',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hour12:false,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+  return ''; // We'll use a simpler approach via epoch comparison
+}
+
+function getMidnightBerlin(dateStr){
+  // dateStr = YYYY-MM-DD
+  return new Date(new Date(dateStr+'T00:00:00').toLocaleString('en-US',{timeZone:TZ}));
+}
+
+function getBerlinDateStr(ts){
+  return new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ts));
+}
+
+function getWeekBounds(){
+  const now = new Date();
+  const berlinNow = new Date(now.toLocaleString('en-US',{timeZone:TZ}));
+  const dow = berlinNow.getDay(); // 0=Sun
+  const monday = new Date(berlinNow);
+  monday.setDate(berlinNow.getDate() - ((dow+6)%7));
+  monday.setHours(0,0,0,0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate()+7);
+  return {start:monday.getTime(), end:sunday.getTime()};
+}
+
+function getLastWeekBounds(){
+  const {start} = getWeekBounds();
+  const end = start;
+  const s = start - 7*86400000;
+  return {start:s, end};
+}
+
+function getMonthBounds(){
+  const now = new Date();
+  const berlinStr = new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+  const [y,m] = berlinStr.split('-');
+  const start = new Date(`${y}-${m}-01T00:00:00`).getTime();
+  const end = new Date(`${y}-${String(parseInt(m)+1).padStart(2,'0')}-01T00:00:00`).getTime();
+  return {start, end};
+}
+
+function getLastMonthBounds(){
+  const now = new Date();
+  const berlinStr = new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+  let [y,m] = berlinStr.split('-').map(Number);
+  m--;
+  if(m===0){m=12;y--;}
+  const start = new Date(`${y}-${String(m).padStart(2,'0')}-01T00:00:00`).getTime();
+  const end = new Date(`${berlinStr.split('-')[0]}-${String(parseInt(berlinStr.split('-')[1])).padStart(2,'0').replace(/^0/,'')}-01T00:00:00`).getTime();
+  const endParsed = getMonthBounds().start;
+  return {start, end: endParsed};
+}
+
+// ── STORAGE ──
+const STORAGE_KEY = 'bamnapp_shifts';
+const OPEN_SHIFT_KEY = 'bamnapp_open';
+const ONBOARD_KEY = 'bamnapp_onboarded';
+
+function loadShifts(){
+  try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return []}
+}
+
+function saveShifts(shifts){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(shifts));
+}
+
+function getOpenShift(){
+  try{return JSON.parse(localStorage.getItem(OPEN_SHIFT_KEY)||'null')}catch{return null}
+}
+
+function setOpenShift(shift){
+  if(shift) localStorage.setItem(OPEN_SHIFT_KEY, JSON.stringify(shift));
+  else localStorage.removeItem(OPEN_SHIFT_KEY);
+}
+
+function genId(){
+  return Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+}
+
+// ── PRUNING (30-day retention) ──
+function pruneOldShifts(){
+  const cutoff = Date.now() - 30*24*3600*1000;
+  const shifts = loadShifts().filter(s=>{
+    const t = s.clockedIn || s.manualIn;
+    return t && new Date(t).getTime() > cutoff;
+  });
+  saveShifts(shifts);
+}
+
+// ── AUTO-CLOCK-OUT CHECK ──
+function checkAutoClockOut(){
+  const open = getOpenShift();
+  if(!open) return;
+
+  const clockInTime = new Date(open.clockedIn).getTime();
+  const now = Date.now();
+
+  // Find the next 02:00 Berlin time after clock-in
+  const cinDate = new Date(open.clockedIn);
+  const cinBerlinStr = getBerlinDateStr(cinDate);
+  let auto2am = new Date(cinBerlinStr+'T02:00:00');
+
+  // If clock-in is after 02:00, next 02:00 is tomorrow
+  const cinBerlin = new Date(cinDate.toLocaleString('en-US',{timeZone:TZ}));
+  if(cinBerlin.getHours()>=2){
+    auto2am.setDate(auto2am.getDate()+1);
+  }
+
+  // Only auto-clock-out if 02:00 has already passed
+  if(now > auto2am.getTime()){
+    const shift = {
+      ...open,
+      clockedOut: auto2am.toISOString(),
+      autoClockOut: true,
+      flagged: true,
+      id: open.id || genId(),
+    };
+    shift.audit = shift.audit || [];
+    shift.audit.push({
+      action:'auto-clock-out',
+      at: auto2am.toISOString(),
+      note:'System: automatically clocked out at 02:00'
+    });
+    const shifts = loadShifts();
+    shifts.unshift(shift);
+    saveShifts(shifts);
+    setOpenShift(null);
+    showToast('You were auto-clocked out at 02:00 — please review this shift');
+  }
+}
+
+// ── CLOCK IN/OUT ──
+function handleClockBtn(){
+  const open = getOpenShift();
+  if(open){
+    // Clock out
+    const now = new Date().toISOString();
+    const shift = {
+      ...open,
+      clockedOut: now,
+      id: open.id || genId(),
+    };
+    const shifts = loadShifts();
+    shifts.unshift(shift);
+    saveShifts(shifts);
+    setOpenShift(null);
+    showToast('Clocked out — shift saved');
+  } else {
+    // Clock in
+    const now = new Date();
+    const h = parseInt(new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',hour12:false}).format(now));
+    if(h >= 22 || h < 2){
+      // Allow, but note it
+    }
+    const shift = {
+      id: genId(),
+      clockedIn: now.toISOString(),
+      clockedOut: null,
+      autoClockOut: false,
+      flagged: false,
+      manual: false,
+      correctedIn: null,
+      correctedOut: null,
+      correctionReason: null,
+      audit: [{action:'clock-in', at: now.toISOString()}]
+    };
+    setOpenShift(shift);
+    showToast('Clocked in');
+  }
+  updateHomeUI();
+}
+
+// ── UI STATE ──
+let currentFilter = 'all';
+
+function showScreen(name, btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(name==='shifts') renderShifts();
+  if(name==='export') updateExportPreview();
+  if(name==='home') updateHomeUI();
+}
+
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── HOME UI ──
+function updateHomeUI(){
+  const now = new Date();
+  document.getElementById('home-date').textContent = fmtDateTime(now).split(' ').slice(0,1)[0]+' — '+new Intl.DateTimeFormat('en-GB',{timeZone:TZ,weekday:'long',day:'numeric',month:'long'}).format(now);
+
+  const open = getOpenShift();
+  const btn = document.getElementById('clock-btn');
+  const btnText = document.getElementById('clock-btn-text');
+  const btnLabel = document.getElementById('clock-btn-label');
+
+  if(open){
+    btn.classList.add('clocked-in');
+    btnText.textContent = 'Clock Out';
+    btnLabel.textContent = 'tap to end shift';
+    document.getElementById('clock-icon').innerHTML='<rect x="6" y="6" width="12" height="12" rx="1"/>';
+    updateDuration(open.clockedIn);
+  } else {
+    btn.classList.remove('clocked-in');
+    btnText.textContent = 'Clock In';
+    btnLabel.textContent = 'tap to start shift';
+    document.getElementById('clock-icon').innerHTML='<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>';
+    document.getElementById('current-shift-info').textContent='';
+  }
+
+  // Stats
+  const shifts = loadShifts();
+  const nowTs = now.getTime();
+  const todayStr = getBerlinDateStr(now);
+
+  function sumHours(filter){
+    return shifts.reduce((acc,s)=>{
+      const t = s.correctedIn||s.clockedIn||s.manualIn;
+      if(!t) return acc;
+      const ds = getBerlinDateStr(new Date(t));
+      const ts = new Date(t).getTime();
+      let include = false;
+      if(filter==='today') include = ds===todayStr;
+      else if(filter==='week'){const b=getWeekBounds();include=ts>=b.start&&ts<b.end;}
+      else if(filter==='month'){const b=getMonthBounds();include=ts>=b.start&&ts<b.end;}
+      else include=true;
+      if(include) acc += shiftDurationMs(s);
+      return acc;
+    },0);
+  }
+
+  // Add open shift to today/week/month
+  let openMs = 0;
+  if(open){openMs = nowTs - new Date(open.clockedIn).getTime();}
+
+  document.getElementById('stat-today').textContent = hoursDecimal(sumHours('today')+(openMs));
+  document.getElementById('stat-week').textContent = hoursDecimal(sumHours('week')+(openMs));
+  document.getElementById('stat-month').textContent = hoursDecimal(sumHours('month')+(openMs));
+  document.getElementById('stat-all').textContent = hoursDecimal(sumHours('all')+(openMs));
+
+  // Flags
+  const flagged = shifts.filter(s=>s.flagged||s.autoClockOut);
+  const fc = document.getElementById('flags-container');
+  fc.innerHTML='';
+  if(flagged.length){
+    const d = document.createElement('div');
+    d.className='card warn';
+    d.innerHTML=`<div class="card-label">Needs attention</div><div style="font-size:14px;color:#8b3010;line-height:1.7">${flagged.length} shift${flagged.length>1?'s':''} flagged — you were auto-clocked out. Please review and correct.</div><button class="btn-small" style="margin-top:10px;border-color:#e8b8a8;color:#8b3010" onclick="showScreen('shifts',document.getElementById('nav-shifts'))">Review shifts →</button>`;
+    fc.appendChild(d);
+  }
+}
+
+let durationInterval;
+function updateDuration(clockInISO){
+  clearInterval(durationInterval);
+  function tick(){
+    const ms = Date.now() - new Date(clockInISO).getTime();
+    const h = Math.floor(ms/3600000);
+    const m = Math.floor((ms%3600000)/60000);
+    const s = Math.floor((ms%60000)/1000);
+    const pad = n=>String(n).padStart(2,'0');
+    document.getElementById('current-shift-info').innerHTML=`Shift running — <strong>${pad(h)}:${pad(m)}:${pad(s)}</strong>`;
+  }
+  tick();
+  durationInterval = setInterval(tick,1000);
+}
+
+function startLiveClock(){
+  setInterval(()=>{
+    const now = new Date();
+    document.getElementById('live-time').textContent = new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(now);
+  },1000);
+}
+
+// ── FILTER SHIFTS ──
+function setFilter(btn, filter){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = filter;
+  renderShifts();
+}
+
+function filterShifts(shifts, filter){
+  const now = new Date();
+  const todayStr = getBerlinDateStr(now);
+  return shifts.filter(s=>{
+    const t = s.correctedIn||s.clockedIn||s.manualIn;
+    if(!t) return false;
+    const ts = new Date(t).getTime();
+    const ds = getBerlinDateStr(new Date(t));
+    if(filter==='today') return ds===todayStr;
+    if(filter==='yesterday'){
+      const y = new Date(now); y.setDate(now.getDate()-1);
+      return ds===getBerlinDateStr(y);
+    }
+    if(filter==='week'){const b=getWeekBounds();return ts>=b.start&&ts<b.end;}
+    if(filter==='lastweek'){const b=getLastWeekBounds();return ts>=b.start&&ts<b.end;}
+    if(filter==='month'){const b=getMonthBounds();return ts>=b.start&&ts<b.end;}
+    if(filter==='lastmonth'){const b=getLastMonthBounds();return ts>=b.start&&ts<b.end;}
+    return true;
+  });
+}
+
+// ── RENDER SHIFTS ──
+function renderShifts(){
+  const all = loadShifts();
+  const shifts = filterShifts(all, currentFilter);
+  const list = document.getElementById('shifts-list');
+
+  if(!shifts.length){
+    list.innerHTML=`<div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg><p>No shifts in this period</p></div>`;
+    return;
+  }
+
+  list.innerHTML = shifts.map(s=>{
+    const effIn = s.correctedIn||s.clockedIn||s.manualIn;
+    const effOut = s.correctedOut||s.clockedOut||s.manualOut;
+    const ms = shiftDurationMs(s);
+    const tags = [];
+    if(s.autoClockOut) tags.push(`<span class="tag warn">Auto clocked-out</span>`);
+    if(s.manual) tags.push(`<span class="tag manual">Manual record</span>`);
+    if(s.correctedIn||s.correctedOut) tags.push(`<span class="tag info">Corrected</span>`);
+
+    return `<div class="shift-item ${s.flagged?'flagged':''} ${s.manual?'manual':''} ${(s.correctedIn||s.correctedOut)&&!s.flagged?'corrected':''}">
+      <div class="shift-date">${fmtDate(effIn)}</div>
+      <div class="shift-times">${fmtTime(effIn)} → ${effOut?fmtTime(effOut):'ongoing'}</div>
+      <div class="shift-hours">${ms?hoursDecimal(ms)+' hrs':'—'}</div>
+      ${tags.length?`<div class="shift-tags">${tags.join('')}</div>`:''}
+      <div class="shift-actions">
+        <button class="btn-small primary" onclick="openCorrection('${s.id}')">Correct</button>
+        <button class="btn-small" onclick="openAudit('${s.id}')">Audit trail</button>
+        <button class="btn-small" style="color:var(--warn);border-color:#e8b8a8" onclick="deleteShift('${s.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── CORRECTION ──
+function openCorrection(id){
+  const shifts = loadShifts();
+  const s = shifts.find(x=>x.id===id);
+  if(!s) return;
+
+  document.getElementById('correct-shift-id').value = id;
+
+  const effIn = s.correctedIn||s.clockedIn||s.manualIn;
+  const effOut = s.correctedOut||s.clockedOut||s.manualOut;
+
+  document.getElementById('correct-in').value = effIn?toBerlinISO(effIn):'';
+  document.getElementById('correct-out').value = effOut?toBerlinISO(effOut):'';
+  document.getElementById('correct-reason').value = '';
+
+  let orig = '';
+  if(s.clockedIn) orig += `Original clock-in: ${fmtDateTime(s.clockedIn)}<br>`;
+  if(s.clockedOut) orig += `Original clock-out: ${fmtDateTime(s.clockedOut)}<br>`;
+  if(s.autoClockOut) orig += `<span style="color:var(--warn)">⚠ This shift was auto-clocked out at 02:00</span>`;
+  document.getElementById('correct-original').innerHTML = orig;
+
+  openModal('modal-correct');
+}
+
+function saveCorrection(){
+  const id = document.getElementById('correct-shift-id').value;
+  const reason = document.getElementById('correct-reason').value.trim();
+  if(!reason){showToast('Please enter a reason for the correction');return;}
+
+  const inVal = document.getElementById('correct-in').value;
+  const outVal = document.getElementById('correct-out').value;
+  if(!inVal||!outVal){showToast('Please fill in both times');return;}
+
+  const newIn = new Date(inVal).toISOString();
+  const newOut = new Date(outVal).toISOString();
+
+  if(new Date(newOut)<=new Date(newIn)){showToast('Clock-out must be after clock-in');return;}
+
+  const shifts = loadShifts();
+  const idx = shifts.findIndex(x=>x.id===id);
+  if(idx===-1) return;
+
+  const s = shifts[idx];
+  s.correctedIn = newIn;
+  s.correctedOut = newOut;
+  s.correctionReason = reason;
+  s.flagged = false;
+  s.audit = s.audit||[];
+  s.audit.push({
+    action:'correction',
+    at: new Date().toISOString(),
+    correctedIn: newIn,
+    correctedOut: newOut,
+    reason,
+    previousIn: s.correctedIn,
+    previousOut: s.correctedOut,
+  });
+
+  shifts[idx] = s;
+  saveShifts(shifts);
+  closeModal('modal-correct');
+  renderShifts();
+  updateHomeUI();
+  showToast('Correction saved');
+}
+
+// ── AUDIT ──
+function openAudit(id){
+  const shifts = loadShifts();
+  const s = shifts.find(x=>x.id===id);
+  if(!s) return;
+  const audit = s.audit||[];
+  const html = audit.length
+    ? audit.map(a=>`<div class="audit-item"><strong>${a.action}</strong><br>${fmtDateTime(a.at)}${a.reason?`<br>Reason: ${a.reason}`:''}${a.note?`<br>${a.note}`:''}</div>`).join('')
+    : '<p style="color:var(--ink3);font-size:13px">No audit entries for this shift.</p>';
+  document.getElementById('audit-content').innerHTML = html;
+  openModal('modal-audit');
+}
+
+// ── ADD MANUAL RECORD ──
+function openAddRecord(){
+  document.getElementById('add-in').value='';
+  document.getElementById('add-out').value='';
+  document.getElementById('add-note').value='';
+  openModal('modal-add');
+}
+
+function saveManualRecord(){
+  const inVal = document.getElementById('add-in').value;
+  const outVal = document.getElementById('add-out').value;
+  if(!inVal||!outVal){showToast('Please enter both clock-in and clock-out times');return;}
+
+  const newIn = new Date(inVal).toISOString();
+  const newOut = new Date(outVal).toISOString();
+  if(new Date(newOut)<=new Date(newIn)){showToast('Clock-out must be after clock-in');return;}
+
+  const note = document.getElementById('add-note').value.trim();
+  const shift = {
+    id: genId(),
+    clockedIn: null,
+    clockedOut: null,
+    manualIn: newIn,
+    manualOut: newOut,
+    manual: true,
+    autoClockOut: false,
+    flagged: false,
+    correctedIn: null,
+    correctedOut: null,
+    correctionReason: null,
+    audit:[{action:'manual-record-added', at: new Date().toISOString(), note: note||'No note'}]
+  };
+
+  const shifts = loadShifts();
+  shifts.unshift(shift);
+  shifts.sort((a,b)=>{
+    const ta = new Date(a.correctedIn||a.clockedIn||a.manualIn||0).getTime();
+    const tb = new Date(b.correctedIn||b.clockedIn||b.manualIn||0).getTime();
+    return tb-ta;
+  });
+  saveShifts(shifts);
+  closeModal('modal-add');
+  renderShifts();
+  updateHomeUI();
+  showToast('Manual record added');
+}
+
+// ── DELETE ──
+function deleteShift(id){
+  if(!confirm('Delete this shift? This cannot be undone.')) return;
+  const shifts = loadShifts().filter(s=>s.id!==id);
+  saveShifts(shifts);
+  renderShifts();
+  updateHomeUI();
+  showToast('Shift deleted');
+}
+
+// ── EXPORT ──
+function setExportRange(range){
+  const now = new Date();
+  const toISO = d => new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+
+  let from, to;
+  if(range==='week'){const b=getWeekBounds();from=new Date(b.start);to=new Date(b.end-86400000);}
+  else if(range==='lastweek'){const b=getLastWeekBounds();from=new Date(b.start);to=new Date(b.end-86400000);}
+  else if(range==='month'){const b=getMonthBounds();from=new Date(b.start);to=now;}
+  else if(range==='lastmonth'){const b=getLastMonthBounds();from=new Date(b.start);to=new Date(b.end-86400000);}
+  else{const shifts=loadShifts();if(!shifts.length)return;const earliest=shifts.reduce((min,s)=>{const t=new Date(s.correctedIn||s.clockedIn||s.manualIn||Date.now()).getTime();return t<min?t:min;},Date.now());from=new Date(earliest);to=now;}
+
+  document.getElementById('export-from').value = toISO(from);
+  document.getElementById('export-to').value = toISO(to);
+  updateExportPreview();
+}
+
+function getExportShifts(){
+  const fromVal = document.getElementById('export-from').value;
+  const toVal = document.getElementById('export-to').value;
+  if(!fromVal||!toVal) return [];
+  const from = new Date(fromVal+'T00:00:00').getTime();
+  const to = new Date(toVal+'T23:59:59').getTime();
+  return loadShifts().filter(s=>{
+    const t = new Date(s.correctedIn||s.clockedIn||s.manualIn||0).getTime();
+    return t>=from&&t<=to;
+  });
+}
+
+function buildCSV(shifts){
+  const headers = ['Date','Original Clock-In','Original Clock-Out','Corrected Clock-In','Corrected Clock-Out','Total Hours','Manually Added','Auto Clock-Out','Correction Reason'];
+  const rows = shifts.map(s=>{
+    const effIn = s.correctedIn||s.clockedIn||s.manualIn;
+    const effOut = s.correctedOut||s.clockedOut||s.manualOut;
+    const ms = shiftDurationMs(s);
+    return [
+      fmtDate(effIn),
+      s.clockedIn?fmtDateTime(s.clockedIn):'',
+      s.clockedOut?fmtDateTime(s.clockedOut):'',
+      s.correctedIn?fmtDateTime(s.correctedIn):(s.manualIn?fmtDateTime(s.manualIn):''),
+      s.correctedOut?fmtDateTime(s.correctedOut):(s.manualOut?fmtDateTime(s.manualOut):''),
+      ms?hoursDecimal(ms):'0.00',
+      s.manual?'Yes':'No',
+      s.autoClockOut?'Yes':'No',
+      s.correctionReason||''
+    ].join(';');
+  });
+  return [headers.join(';'), ...rows].join('\n');
+}
+
+function updateExportPreview(){
+  const shifts = getExportShifts();
+  const preview = document.getElementById('export-preview');
+  if(!shifts.length){preview.textContent='No shifts in selected range';return;}
+  const csv = buildCSV(shifts);
+  preview.textContent = csv.split('\n').slice(0,4).join('\n')+(shifts.length>3?'\n…':'');
+}
+
+function exportCSV(){
+  const shifts = getExportShifts();
+  if(!shifts.length){showToast('No shifts in selected range');return;}
+  const csv = buildCSV(shifts);
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const from = document.getElementById('export-from').value;
+  const to = document.getElementById('export-to').value;
+  a.href=url;
+  a.download=`bamnapp_shifts_${from}_${to}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV downloaded');
+}
+
+// ── CLEAR DATA ──
+function confirmClearData(){
+  if(confirm('Delete all your shift data? This cannot be undone.')){
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(OPEN_SHIFT_KEY);
+    setOpenShift(null);
+    updateHomeUI();
+    showToast('All data cleared');
+  }
+}
+
+// ── ONBOARDING ──
+function acknowledgeOnboarding(){
+  localStorage.setItem(ONBOARD_KEY,'1');
+  document.getElementById('onboarding').style.display='none';
+}
+
+// ── INIT ──
+function init(){
+  if(localStorage.getItem(ONBOARD_KEY)){
+    document.getElementById('onboarding').style.display='none';
+  }
+
+  pruneOldShifts();
+  checkAutoClockOut();
+  updateHomeUI();
+  startLiveClock();
+
+  // Set default export dates
+  const now = new Date();
+  const fmt = d=>new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+  const monthStart = new Date(getMonthBounds().start);
+  document.getElementById('export-from').value = fmt(monthStart);
+  document.getElementById('export-to').value = fmt(now);
+  document.getElementById('export-from').addEventListener('change',updateExportPreview);
+  document.getElementById('export-to').addEventListener('change',updateExportPreview);
+
+  // Close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(o=>{
+    o.addEventListener('click',e=>{if(e.target===o) o.classList.remove('open')});
+  });
+
+  // Service worker
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  }
+
+  // Refresh home stats every minute
+  setInterval(updateHomeUI, 60000);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
