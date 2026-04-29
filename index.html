@@ -440,12 +440,7 @@ function fmtDayShort(ts){return new Intl.DateTimeFormat('en-GB',{timeZone:TZ,wee
 function getBDS(ts){return new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ts));}
 function toBerlinISO(ts){return new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts)).replace(' ','T');}
 function hrs(ms){return(ms/3600000).toFixed(2);}
-function splitRow(row){
-  // Detect separator: tab, semicolon, or comma
-  if(row.includes('\t')) return row.split('\t');
-  if(row.includes(';')) return row.split(';');
-  return row.split(',');
-}
+
 function shiftMs(s){
   const i=s.correctedIn||s.clockedIn||s.manualIn;
   const o=s.correctedOut||s.clockedOut||s.manualOut;
@@ -894,3 +889,191 @@ function renderCalendar(){
   const lastDay=new Date(calYear,calMonth+1,0).getDate();
   const startDow=(first.getDay()+6)%7;
   const monthName=new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric'}).format(first);
+  const dows=['M','T','W','T','F','S','S'];
+  let cells='';
+  for(let i=0;i<startDow;i++)cells+='<div class="cal-cell other-month"></div>';
+  for(let d=1;d<=lastDay;d++){
+    const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=ds===todayStr;
+    const hasAny=!!allDays[ds];
+    const isMe=myDays.has(ds);
+    // tappable if any shifts exist that day
+    const onclick=hasAny?`onclick="openDayModal('${ds}')"`:'';
+    // highlighted (yellow) only if it's the user's shift day; otherwise subtle dot for other-staff days
+    cells+=`<div class="cal-cell${isMe?' has-shift':''}${hasAny&&!isMe?' has-other':''}${isToday?' today':''}" ${onclick}>
+      <span class="cal-num">${d}</span>${isMe?'<span class="cal-dot"></span>':hasAny?'<span class="cal-dot" style="background:var(--ink3);opacity:0.35"></span>':''}
+    </div>`;
+  }
+  document.getElementById('sched-cal').innerHTML=`
+    <div class="cal-nav">
+      <button onclick="calPrev()">&#8249;</button>
+      <span class="cal-month">${monthName}</span>
+      <button onclick="calNext()">&#8250;</button>
+    </div>
+    <div class="cal-grid">
+      ${dows.map(d=>'<div class="cal-dow">'+d+'</div>').join('')}
+      ${cells}
+    </div>
+    ${!name?'<p style="font-size:13px;color:var(--ink3);text-align:center;margin-top:16px">Set your name in More to see your shifts highlighted</p>':''}
+  `;
+}
+function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
+function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
+function openDayModal(ds){
+  const sched=loadSched();
+  const name=getName().toLowerCase();
+  const dayShifts=sched.filter(s=>getBDS(new Date(s.start))===ds).sort((a,b)=>new Date(a.start)-new Date(b.start));
+  const dateLabel=fmtDayShort(new Date(ds+'T12:00:00'));
+  document.getElementById('modal-day-title').textContent=dateLabel;
+  const myShifts=dayShifts.filter(s=>name&&s.employee.toLowerCase()===name);
+  const othersShifts=dayShifts.filter(s=>!name||s.employee.toLowerCase()!==name);
+  let html='';
+  if(myShifts.length){
+    html+='<div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Your shift</div>';
+    myShifts.forEach(s=>{
+      const ms=new Date(s.end)-new Date(s.start);
+      html+=`<div class="sched-row mine"><div><div class="sched-employee">${s.employee} ★</div><div class="sched-hours">${hrs(ms)} hrs</div></div><div class="sched-time">${fmtT(s.start)} – ${fmtT(s.end)}</div></div>`;
+    });
+  }
+  if(othersShifts.length){
+    html+=`<div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin:${myShifts.length?'14px':'0'}px 0 8px">Also working</div>`;
+    othersShifts.forEach(s=>{
+      const ms=new Date(s.end)-new Date(s.start);
+      html+=`<div class="sched-row"><div><div class="sched-employee">${s.employee}</div><div class="sched-hours">${hrs(ms)} hrs</div></div><div class="sched-time">${fmtT(s.start)} – ${fmtT(s.end)}</div></div>`;
+    });
+  }
+  if(!html)html='<p style="color:var(--ink3);font-size:14px">No shifts scheduled this day.</p>';
+  document.getElementById('modal-day-content').innerHTML=html;
+  openModal('modal-day');
+}
+
+// ── RESERVATIONS ──
+function loadResv(){try{return JSON.parse(localStorage.getItem(RESV_KEY)||'[]')}catch{return[]}}
+function saveResv(d){localStorage.setItem(RESV_KEY,JSON.stringify(d))}
+async function refreshReservations(){
+  document.getElementById('resv-status-label').textContent='Loading…';
+  try{
+    const r=await fetch(RESV_PROXY+'?key='+SECRET_KEY);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const text=await r.text();
+    if(text.trim()==='Unauthorised')throw new Error('Unauthorised');
+    const parsed=parseResvCSV(text);
+    saveResv(parsed);
+    renderReservationsScreen();
+    showToast(`Bookings refreshed — ${parsed.length} reservation${parsed.length!==1?'s':''} loaded`);
+  }catch(e){
+    document.getElementById('resv-status-label').textContent='Could not load — check connection';
+    showToast('Failed to fetch bookings');
+  }
+}
+function parseResvCSV(text){
+  const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const header=splitRow(lines[0]).map(c=>c.trim().toLowerCase());
+  const iDay=header.findIndex(h=>h==='day');
+  const iDate=header.findIndex(h=>h==='date');
+  const iName=header.findIndex(h=>h==='name');
+  const iGuests=header.findIndex(h=>h==='guests');
+  const iContact=header.findIndex(h=>['contact','phone','email'].includes(h));
+  const iNotes=header.findIndex(h=>['notes','note'].includes(h));
+  if(iDate===-1||iName===-1){showToast('Bookings CSV format not recognised');return[];}
+  return lines.slice(1).map(row=>{
+    const c=splitRow(row);
+    const dateStr=c[iDate]||'';
+    let dp='';
+    if(dateStr.includes('/')){const p=dateStr.split('/');if(p.length===3){const[d,m,y]=p;dp=`${y.length===2?'20'+y:y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;}}
+    else if(dateStr.match(/^\d{4}-\d{2}-\d{2}$/))dp=dateStr;
+    if(!dp)return null;
+    return{day:iDay!==-1?c[iDay]||'':'',date:dp,name:c[iName]||'',guests:iGuests!==-1?c[iGuests]||'':'',contact:iContact!==-1?c[iContact]||'':'',notes:iNotes!==-1?c[iNotes]||'':''};
+  }).filter(Boolean);
+}
+let resvCalYear, resvCalMonth;
+function renderReservationsScreen(){
+  const all=loadResv(),label=document.getElementById('resv-status-label');
+  if(!all.length){
+    label.textContent='No bookings loaded — tap ↻ Refresh';
+    document.getElementById('resv-cal').innerHTML=`<div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>${url?'Tap refresh to load bookings':'Set a URL to get started'}</p></div>`;
+    return;
+  }
+  const dates=all.map(r=>r.date).sort();
+  label.textContent=`${fmtD(dates[0]+'T12:00:00')} – ${fmtD(dates[dates.length-1]+'T12:00:00')} · ${all.length} booking${all.length!==1?'s':''}`;
+  renderResvCalendar();
+}
+function renderResvCalendar(){
+  const all=loadResv();
+  const now=new Date();
+  if(resvCalYear===undefined){resvCalYear=parseInt(getBDS(now).slice(0,4));resvCalMonth=parseInt(getBDS(now).slice(5,7))-1;}
+  // Group by date
+  const byDay={};
+  all.forEach(r=>{if(!byDay[r.date])byDay[r.date]=[];byDay[r.date].push(r);});
+  const todayStr=getBDS(now);
+  const first=new Date(resvCalYear,resvCalMonth,1);
+  const lastDay=new Date(resvCalYear,resvCalMonth+1,0).getDate();
+  const startDow=(first.getDay()+6)%7;
+  const monthName=new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric'}).format(first);
+  const dows=['M','T','W','T','F','S','S'];
+  let cells='';
+  for(let i=0;i<startDow;i++)cells+='<div class="cal-cell other-month"></div>';
+  for(let d=1;d<=lastDay;d++){
+    const ds=`${resvCalYear}-${String(resvCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=ds===todayStr;
+    const bookings=byDay[ds];
+    const count=bookings?bookings.length:0;
+    const onclick=count?`onclick="openResvDayModal('${ds}')"`:'';
+    cells+=`<div class="cal-cell${count?' has-shift':''}${isToday?' today':''}" ${onclick}>
+      <span class="cal-num">${d}</span>
+      ${count?`<span style="font-size:9px;color:var(--yolk-dim);font-weight:500;margin-top:1px">${count}</span>`:''}
+    </div>`;
+  }
+  document.getElementById('resv-cal').innerHTML=`
+    <div class="cal-nav">
+      <button onclick="resvCalPrev()">&#8249;</button>
+      <span class="cal-month">${monthName}</span>
+      <button onclick="resvCalNext()">&#8250;</button>
+    </div>
+    <div class="cal-grid">
+      ${dows.map(d=>'<div class="cal-dow">'+d+'</div>').join('')}
+      ${cells}
+    </div>`;
+}
+function resvCalPrev(){resvCalMonth--;if(resvCalMonth<0){resvCalMonth=11;resvCalYear--;}renderResvCalendar();}
+function resvCalNext(){resvCalMonth++;if(resvCalMonth>11){resvCalMonth=0;resvCalYear++;}renderResvCalendar();}
+function openResvDayModal(ds){
+  const all=loadResv().filter(r=>r.date===ds).sort((a,b)=>a.name.localeCompare(b.name));
+  const dateLabel=fmtDayShort(new Date(ds+'T12:00:00'));
+  document.getElementById('modal-resv-day-title').textContent=dateLabel;
+  const total=all.reduce((s,r)=>s+(parseInt(r.guests)||0),0);
+  let html=`<div style="font-size:12px;color:var(--ink3);margin-bottom:12px">${all.length} reservation${all.length!==1?'s':''} · ${total} guest${total!==1?'s':''} total</div>`;
+  html+=all.map(r=>`<div class="resv-row">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <div class="resv-name">${r.name}</div>
+      <div style="font-size:13px;font-weight:500;color:var(--ink3)">${r.guests?r.guests+' guest'+((parseInt(r.guests)||0)!==1?'s':''):''}</div>
+    </div>
+    ${r.contact?`<div class="resv-meta">${r.contact}</div>`:''}
+    ${r.notes?`<div class="resv-note">${r.notes}</div>`:''}
+  </div>`).join('');
+  document.getElementById('modal-resv-day-content').innerHTML=html;
+  openModal('modal-resv-day');
+}
+
+// ── PIN removed — auth handled by proxy secret key ──
+
+// ── TIPS ──
+function loadTips(){try{return JSON.parse(localStorage.getItem(TIPS_KEY)||'[]')}catch{return[]}}
+async function refreshTips(){
+  try{
+    const r=await fetch(TIPS_PROXY+'?key='+SECRET_KEY);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const text=await r.text();
+    if(text.trim()==='Unauthorised')throw new Error('Unauthorised');
+    const parsed=parseTipsCSV(text);
+    localStorage.setItem(TIPS_KEY,JSON.stringify(parsed));
+    renderTipsScreen();
+    showToast(`Tips refreshed — ${parsed.length} day${parsed.length!==1?'s':''} loaded`);
+  }catch(e){
+    showToast('Failed to fetch tips data');
+  }
+}
+function parseTipsCSV(text){
+  // Columns: Date;H;T;U;D  (Hundreds, Tens, Units, Decimal)
+  const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
