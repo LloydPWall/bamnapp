@@ -323,6 +323,12 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
         <h3 style="color:var(--warn)">Important</h3>
         <p style="color:#8b3010">Export your CSV regularly. If you lose your device data, there is no way to recover it.</p>
       </div>
+      <div class="section-title">Backup &amp; Restore</div>
+      <div class="info-block" style="margin-bottom:10px">
+        <p style="font-size:13px;color:var(--ink3);line-height:1.6">Export your shifts regularly as a backup. If you ever lose your data, upload your backup CSV here to restore it.</p>
+      </div>
+      <button class="btn-secondary" style="margin-top:0" onclick="document.getElementById('restore-file-input').click()">↑ Restore from backup CSV</button>
+      <input type="file" id="restore-file-input" accept=".csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
       <div class="version-tag">BamnApp v1.6.0</div>
@@ -844,6 +850,99 @@ function init(){
   if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
   setInterval(updateHomeUI,60000);
 }
+// ── CSV RESTORE ──
+function handleRestoreUpload(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  event.target.value='';
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const text=ev.target.result;
+    const restored=parseBackupCSV(text);
+    if(!restored.length){showToast('Could not read backup — check the file');return;}
+    if(!confirm(`Restore ${restored.length} shift${restored.length!==1?'s':''} from backup? This will merge with any existing shifts.`))return;
+    mergeRestoredShifts(restored);
+    updateHomeUI();
+    showToast(`Restored ${restored.length} shift${restored.length!==1?'s':''}`);
+  };
+  reader.readAsText(file);
+}
+function parseBackupCSV(text){
+  const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const header=lines[0].split(';').map(h=>h.trim().toLowerCase());
+  const iDate=header.findIndex(h=>h==='date');
+  const iOrigIn=header.findIndex(h=>h==='original clock-in');
+  const iOrigOut=header.findIndex(h=>h==='original clock-out');
+  const iCorrIn=header.findIndex(h=>h==='corrected clock-in');
+  const iCorrOut=header.findIndex(h=>h==='corrected clock-out');
+  const iManual=header.findIndex(h=>h==='manually added');
+  const iAuto=header.findIndex(h=>h==='auto clock-out');
+  const iReason=header.findIndex(h=>h==='correction reason');
+  if(iDate===-1){return[];}
+  const results=[];
+  for(const row of lines.slice(1)){
+    if(!row.trim())continue;
+    const c=row.split(';').map(x=>x.trim());
+    const origIn=iOrigIn!==-1?c[iOrigIn]||'':'';
+    const origOut=iOrigOut!==-1?c[iOrigOut]||'':'';
+    const corrIn=iCorrIn!==-1?c[iCorrIn]||'':'';
+    const corrOut=iCorrOut!==-1?c[iCorrOut]||'':'';
+    const isManual=(iManual!==-1&&c[iManual]==='Yes')||(!origIn&&corrIn);
+    const isAuto=iAuto!==-1&&c[iAuto]==='Yes';
+    const reason=iReason!==-1?c[iReason]||'':'';
+    // Parse DD/MM/YY HH:MM to ISO
+    function parseDT(s){
+      if(!s)return null;
+      // format: DD/MM/YY HH:MM
+      const m=s.match(/(\d{2})\/(\d{2})\/(\d{2,4})\s+(\d{2}):(\d{2})/);
+      if(!m)return null;
+      const[,d,mo,y,h,min]=m;
+      const year=y.length===2?'20'+y:y;
+      return new Date(`${year}-${mo}-${d}T${h}:${min}:00`).toISOString();
+    }
+    const clockedIn=isManual?null:parseDT(origIn);
+    const clockedOut=isManual?null:parseDT(origOut);
+    const manualIn=isManual?parseDT(corrIn)||parseDT(origIn):null;
+    const manualOut=isManual?parseDT(corrOut)||parseDT(origOut):null;
+    const correctedIn=!isManual&&corrIn&&corrIn!==origIn?parseDT(corrIn):null;
+    const correctedOut=!isManual&&corrOut&&corrOut!==origOut?parseDT(corrOut):null;
+    const primaryTime=clockedIn||manualIn;
+    if(!primaryTime)continue;
+    results.push({
+      id:genId(),
+      clockedIn,clockedOut,
+      manualIn,manualOut,
+      manual:isManual,
+      autoClockOut:isAuto,
+      flagged:false,
+      correctedIn,correctedOut,
+      correctionReason:reason||null,
+      audit:[{action:'restored-from-backup',at:new Date().toISOString()}]
+    });
+  }
+  return results;
+}
+function mergeRestoredShifts(restored){
+  const existing=loadShifts();
+  // Deduplicate by primary timestamp — don't add if same clock-in already exists
+  const existingTimes=new Set(existing.map(s=>{
+    const t=s.clockedIn||s.manualIn;
+    return t?new Date(t).toISOString().slice(0,16):'';
+  }));
+  const toAdd=restored.filter(s=>{
+    const t=s.clockedIn||s.manualIn;
+    if(!t)return false;
+    return !existingTimes.has(new Date(t).toISOString().slice(0,16));
+  });
+  const merged=[...existing,...toAdd].sort((a,b)=>{
+    const ta=new Date(a.correctedIn||a.clockedIn||a.manualIn||0).getTime();
+    const tb=new Date(b.correctedIn||b.clockedIn||b.manualIn||0).getTime();
+    return tb-ta;
+  });
+  saveShifts(merged);
+}
+
 document.addEventListener('DOMContentLoaded',init);
 
 // ── SWIPE NAVIGATION ──
