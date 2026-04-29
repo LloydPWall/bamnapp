@@ -120,6 +120,14 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .view-toggle button.active{background:var(--ink);color:var(--yolk-light)}
 /* Day popup */
 #modal-day .sched-row{margin-bottom:8px}
+/* Reservation rows */
+.resv-row{background:#fff;border:1px solid var(--paper3);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;}
+.resv-name{font-size:15px;font-weight:500;color:var(--ink)}
+.resv-meta{font-size:13px;color:var(--ink3);margin-top:2px}
+.resv-note{font-size:12px;color:var(--ink3);margin-top:6px;font-style:italic;border-top:1px solid var(--paper3);padding-top:6px}
+
+/* Tip estimate */
+.tip-estimate{font-size:13px;color:var(--ok);margin-top:3px;font-weight:500}
 </style>
 </head>
 <body>
@@ -138,20 +146,26 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <li>Your clock-in and clock-out times</li>
       <li>Any manual corrections, including original timestamps</li>
       <li>Correction reasons you enter</li>
-      <li>Schedule data uploaded from your manager's file</li>
+      <li>Schedule data (fetched automatically when you refresh the Rota tab)</li>
+      <li>Reservations data (fetched from a shared source when you refresh)</li>
+      <li>Tip data (fetched automatically when you refresh the Tips tab)</li>
     </ul>
   </div>
   <div class="onboard-section">
     <h3>Who can see your data</h3>
-    <p>Nobody. All data is stored <strong style="color:#d4a017">only on this device</strong>, in your browser. Nothing is sent to any server. Schedule files contain all employee names — these are also stored locally only.</p>
+    <p>Nobody. All data is stored <strong style="color:#d4a017">only on this device</strong>, in your browser. Nothing is sent to any server. Schedule, bookings and tip data is fetched via a secure proxy and cached on this device only.</p>
   </div>
   <div class="onboard-section">
     <h3>Data retention</h3>
-    <p>Shift data is kept for <strong style="color:#d4a017">30 days only</strong> and removed automatically. Raise any corrections within this window. After that, contact your manager directly. Schedule data is replaced each time a new file is uploaded.</p>
+    <p>Shift data is kept for <strong style="color:#d4a017">30 days only</strong> and removed automatically. Raise any corrections within this window. After that, contact your manager directly. Schedule, bookings and tip data are fetched fresh on each refresh and cached locally.</p>
   </div>
   <div class="onboard-section">
     <h3>Corrections</h3>
     <p>You can freely correct any of your shift records. Original timestamps are always preserved alongside corrections. Export a CSV to share with your manager if you need to raise a discrepancy.</p>
+  </div>
+  <div class="onboard-section">
+    <h3>Tip estimates</h3>
+    <p>The Tips tab shows an <strong style="color:#d4a017">estimated</strong> tip share based on your logged shift times and scheduled colleague hours. These are approximations only — actual amounts may differ.</p>
   </div>
   <div class="onboard-warn">
     <p>⚠ Your data lives only on this device and browser. Clearing browser storage, uninstalling, or switching devices will erase your history. Export your CSV regularly as a backup.</p>
@@ -226,21 +240,42 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
     <!-- SCHEDULE -->
     <div id="screen-schedule" class="screen">
       <div class="page-header">
-        <h1>Schedule</h1>
+        <h1>Rota</h1>
         <p id="sched-period-label">No schedule loaded</p>
       </div>
       <div id="sched-proj-card"></div>
-      <div class="upload-zone" onclick="document.getElementById('sched-file-input').click()">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <p>Upload schedule file</p>
-        <small>Tap to choose a .csv file from your manager</small>
-      </div>
-      <input type="file" id="sched-file-input" accept=".csv" style="display:none" onchange="handleScheduleUpload(event)"/>
       <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-        <button class="btn-small" onclick="downloadTemplate()">⬇ Template</button>
+        <button class="btn-small primary" onclick="refreshSchedule()">↻ Refresh</button>
         <button class="btn-small" style="color:var(--warn)" onclick="clearSchedule()">Clear</button>
       </div>
       <div id="sched-cal"></div>
+    </div>
+
+    <!-- RESERVATIONS -->
+    <div id="screen-reservations" class="screen">
+      <div class="page-header">
+        <h1>Bookings</h1>
+        <p id="resv-status-label">No data loaded</p>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="btn-small primary" onclick="refreshReservations()">↻ Refresh</button>
+      </div>
+      <div id="resv-cal"></div>
+    </div>
+
+    <!-- TIPS -->
+    <div id="screen-tips" class="screen">
+      <div class="page-header">
+        <h1>Tips</h1>
+        <p>Estimated tip share based on your shift data</p>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="btn-small primary" onclick="refreshTips()">↻ Refresh</button>
+      </div>
+      <div class="info-block" style="background:var(--yolk-pale);border-color:#e8d890;margin-bottom:16px">
+        <p style="font-size:12px;color:var(--yolk-dim);line-height:1.6">Estimates only. Based on your logged times and scheduled colleague hours. Actual amounts may differ. Service hours: Mon–Thu 18:00–23:59 · Fri–Sat 12:00–23:59 · Sun 12:00–18:00.</p>
+      </div>
+      <div id="tips-list"></div>
     </div>
 
     <!-- MORE (Export + About merged) -->
@@ -260,7 +295,6 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
         <button class="btn-small" onclick="setExportRange('all')">All time</button>
       </div>
       <button class="btn-primary" onclick="exportCSV()">Download CSV</button>
-      <div style="font-size:12px;color:var(--ink3);word-break:break-all;background:#fff;border:1px solid var(--paper3);border-radius:var(--radius-sm);padding:12px;min-height:48px;font-family:monospace;white-space:pre-wrap;line-height:1.6;margin-top:10px" id="export-preview"></div>
 
       <div class="section-title">About</div>
       <div class="info-block">
@@ -291,7 +325,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       </div>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v1.3.0</div>
+      <div class="version-tag">BamnApp v1.6.0</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2025 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -308,7 +342,13 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Shifts
     </button>
     <button onclick="showScreen('schedule',this)" id="nav-schedule">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>Schedule
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>Rota
+    </button>
+    <button onclick="showScreen('reservations',this)" id="nav-reservations">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Bookings
+    </button>
+    <button onclick="showScreen('tips',this)" id="nav-tips">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Tips
     </button>
     <button onclick="showScreen('more',this)" id="nav-more">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg>More
@@ -364,6 +404,15 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-resv-day">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-title" id="modal-resv-day-title"></div>
+    <div id="modal-resv-day-content"></div>
+    <button class="btn-secondary" onclick="closeModal('modal-resv-day')" style="margin-top:8px">Close</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-day">
   <div class="modal">
     <span class="modal-handle"></span>
@@ -376,6 +425,11 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 <script>
 const TZ='Europe/Berlin';
 const STORAGE_KEY='bamnapp_shifts', OPEN_KEY='bamnapp_open', ONBOARD_KEY='bamnapp_onboarded', NAME_KEY='bamnapp_name', SCHED_KEY='bamnapp_schedule';
+const RESV_KEY='bamnapp_resv', TIPS_KEY='bamnapp_tips';
+const SECRET='1300';
+const SCHED_PROXY='https://script.google.com/macros/s/AKfycbyMvvtuvtrgFdWnaLc3wbgZtUvIovCLkvc24ie9bAWx1Y4lgc0a-6jUOK36r1nfMqocyA/exec';
+const RESV_PROXY='https://script.google.com/macros/s/AKfycbw_yIxztN2eUTNDnCZKHqHME2Hwcdp9FzTxYEjY5pTxoPw7Lyy4OTg6OrgYjmqbl8MS/exec';
+const TIPS_PROXY='https://script.google.com/macros/s/AKfycbzYt6WZwdXtvM0Hz4YL1vTEHPniei9dvfthEVxFHebybNc_NrzxhZmPyrzI4SKUKpikKQ/exec';
 
 // ── TIME UTILS ──
 function fmtDT(ts){if(!ts)return'—';return new Intl.DateTimeFormat('en-GB',{timeZone:TZ,day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts)).replace(',','');}
@@ -386,6 +440,12 @@ function fmtDayShort(ts){return new Intl.DateTimeFormat('en-GB',{timeZone:TZ,wee
 function getBDS(ts){return new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ts));}
 function toBerlinISO(ts){return new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts)).replace(' ','T');}
 function hrs(ms){return(ms/3600000).toFixed(2);}
+function splitRow(row){
+  // Detect separator: tab, semicolon, or comma
+  if(row.includes('\t')) return row.split('\t');
+  if(row.includes(';')) return row.split(';');
+  return row.split(',');
+}
 function shiftMs(s){
   const i=s.correctedIn||s.clockedIn||s.manualIn;
   const o=s.correctedOut||s.clockedOut||s.manualOut;
@@ -426,6 +486,15 @@ function saveSched(s){localStorage.setItem(SCHED_KEY,JSON.stringify(s))}
 function getName(){return localStorage.getItem(NAME_KEY)||''}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 
+// ── PROXY FETCH ──
+async function proxyFetch(url){
+  const r=await fetch(url+'?key='+SECRET);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const text=await r.text();
+  if(text.trim()==='Unauthorised') throw new Error('Unauthorised');
+  return text;
+}
+
 // ── PRUNE ──
 function pruneOldShifts(){
   const cutoff=Date.now()-30*24*3600000;
@@ -464,7 +533,7 @@ function handleClockBtn(){
 
 // ── NAV ──
 let curFilter='all', curSchedFilter='all';
-const SCREENS=['home','shifts','schedule','more'];
+const SCREENS=['home','shifts','schedule','reservations','tips','more'];
 let curScreenIdx=0;
 function showScreen(name,btn){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -472,10 +541,12 @@ function showScreen(name,btn){
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
   const idx=SCREENS.indexOf(name);if(idx!==-1)curScreenIdx=idx;
   if(btn)btn.classList.add('active');
-  else{const nb=document.getElementById('nav-'+(name==='more'?'more':name));if(nb)nb.classList.add('active');}
+  else{const nb=document.getElementById('nav-'+name);if(nb)nb.classList.add('active');}
   if(name==='shifts')renderShifts();
   if(name==='schedule')renderSchedule();
-  if(name==='more'){updateExportPreview();const n=getName();document.getElementById('info-name-display').textContent=n?'Saved as: '+n:'No name saved.';}
+  if(name==='reservations')renderReservationsScreen();
+  if(name==='tips')renderTipsScreen();
+  if(name==='more'){const n=getName();document.getElementById('info-name-display').textContent=n?'Saved as: '+n:'No name saved.';}
   if(name==='home')updateHomeUI();
 }
 function openModal(id){document.getElementById(id).classList.add('open')}
@@ -588,6 +659,7 @@ function renderShifts(){
       <div class="shift-date">${fmtD(eI)}</div>
       <div class="shift-times">${fmtT(eI)} → ${eO?fmtT(eO):'ongoing'}</div>
       <div class="shift-hours">${ms?hrs(ms)+' hrs':'—'}</div>
+      ${getTipEstimateForShift(s)}
       ${tags.length?'<div class="shift-tags">'+tags.join('')+'</div>':''}
       <div class="shift-actions">
         <button class="btn-small primary" onclick="openCorrection('${s.id}')">Correct</button>
@@ -647,31 +719,41 @@ function deleteShift(id){
 }
 
 // ── SCHEDULE ──
-function handleScheduleUpload(e){
-  const file=e.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const parsed=parseScheduleCSV(ev.target.result);
-    if(!parsed||!parsed.length){showToast('Could not read file — check the format');return;}
-    saveSched(parsed);renderSchedule();updateHomeUI();
-    showToast(`Schedule loaded — ${parsed.length} shift${parsed.length!==1?'s':''} imported`);
-  };
-  reader.readAsText(file);e.target.value='';
+function splitRow(row){
+  if(row.includes('\t'))return row.split('\t').map(c=>c.trim());
+  if(row.includes(';'))return row.split(';').map(c=>c.trim());
+  return row.split(',').map(c=>c.trim());
 }
-function parseScheduleCSV(text){
+async function refreshSchedule(){
+  document.getElementById('sched-period-label').textContent='Loading…';
+  try{
+    const r=await fetch(SCHED_PROXY+'?key='+SECRET_KEY);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const text=await r.text();
+    if(text.trim()==='Unauthorised')throw new Error('Unauthorised');
+    const parsed=parseScheduleText(text);
+    if(!parsed.length){document.getElementById('sched-period-label').textContent='No shifts found in data';return;}
+    saveSched(parsed);renderSchedule();updateHomeUI();
+    showToast(`Rota refreshed — ${parsed.length} shift${parsed.length!==1?'s':''} loaded`);
+  }catch(e){
+    document.getElementById('sched-period-label').textContent='Could not load — check connection';
+    showToast('Failed to fetch rota');
+  }
+}
+function parseScheduleText(text){
   const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
   if(lines.length<2)return[];
-  const header=lines[0].split(';').map(c=>c.trim().toLowerCase());
+  const header=splitRow(lines[0]).map(c=>c.toLowerCase());
   const iDay=header.findIndex(h=>['day','weekday'].includes(h));
   const iDate=header.findIndex(h=>['date','datum'].includes(h));
   const iEmp=header.findIndex(h=>['employee','name','staff'].includes(h));
   const iStart=header.findIndex(h=>['start','start time','from','von'].includes(h));
   const iEnd=header.findIndex(h=>['end','end time','to','finish','bis'].includes(h));
-  if(iDate===-1||iStart===-1||iEnd===-1){showToast('CSV columns not recognised — use the template');return[];}
+  if(iDate===-1||iStart===-1||iEnd===-1){showToast('Rota format not recognised — check sheet headers');return[];}
   const results=[];
   for(const row of lines.slice(1)){
     if(!row.trim())continue;
-    const cols=row.split(';').map(c=>c.trim());
+    const cols=splitRow(row);
     const dateStr=iDate<cols.length?cols[iDate]:'';
     const employee=iEmp!==-1&&iEmp<cols.length?cols[iEmp]:'Unknown';
     const startStr=iStart<cols.length?cols[iStart]:'';
@@ -679,37 +761,24 @@ function parseScheduleCSV(text){
     const day=iDay!==-1&&iDay<cols.length?cols[iDay]:'';
     if(!dateStr||!startStr||!endStr)continue;
     let dp='';
-    if(dateStr.includes('/')){
-      const parts=dateStr.split('/');
-      if(parts.length===3){const[d,m,y]=parts;dp=`${y.length===2?'20'+y:y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;}
-    } else if(dateStr.match(/^\d{4}-\d{2}-\d{2}$/)){dp=dateStr;}
+    if(dateStr.includes('/')){const parts=dateStr.split('/');if(parts.length===3){const[d,m,y]=parts;dp=`${y.length===2?'20'+y:y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;}}
+    else if(dateStr.match(/^\d{4}-\d{2}-\d{2}$/))dp=dateStr;
     if(!dp)continue;
     const norm=t=>{const p=t.split(':');if(p.length>=3)return p[0].padStart(2,'0')+':'+p[1].padStart(2,'0')+':'+p[2].padStart(2,'0');if(p.length===2)return p[0].padStart(2,'0')+':'+p[1].padStart(2,'0')+':00';return t.slice(0,2)+':'+t.slice(2,4)+':00';};
-    const sTime=norm(startStr);
-    const eTime=norm(endStr);
-    const sMs=new Date(dp+'T'+sTime).getTime();
-    let eMs=new Date(dp+'T'+eTime).getTime();
+    const sMs=new Date(dp+'T'+norm(startStr)).getTime();
+    let eMs=new Date(dp+'T'+norm(endStr)).getTime();
     if(isNaN(sMs)||isNaN(eMs))continue;
     if(eMs<=sMs)eMs+=86400000;
     results.push({day,employee:employee||'Unknown',start:new Date(sMs).toISOString(),end:new Date(eMs).toISOString()});
   }
   return results;
 }
-function setSchedFilter(btn,f){document.querySelectorAll('#sched-filter-row .filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');curSchedFilter=f;renderSchedule();}
-function filterSched(sched,f){
-  const now=new Date(),todayStr=getBDS(now);
-  return sched.filter(s=>{const ts=new Date(s.start).getTime(),ds=getBDS(new Date(s.start));
-    if(f==='today')return ds===todayStr;
-    if(f==='week'){const b=getWeekBounds();return ts>=b.start&&ts<b.end;}
-    if(f==='month'){const b=getMonthBounds();return ts>=b.start&&ts<b.end;}
-    return true;});
-}
 function renderSchedule(){
   const all=loadSched(),label=document.getElementById('sched-period-label');
   if(!all.length){
-    label.textContent='No schedule loaded';
+    label.textContent='No rota loaded — tap ↻ Refresh';
     document.getElementById('sched-proj-card').innerHTML='';
-    document.getElementById('sched-cal').innerHTML=`<div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg><p>Upload a schedule file from your manager</p></div>`;
+    document.getElementById('sched-cal').innerHTML=`<div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg><p>Tap ↻ Refresh to load the rota</p></div>`;
     return;
   }
   const dates=all.map(s=>new Date(s.start).getTime()).sort((a,b)=>a-b);
@@ -727,15 +796,7 @@ function renderSchedule(){
   }
   renderCalendar();
 }
-function clearSchedule(){if(!confirm('Clear the schedule? This cannot be undone.'))return;saveSched([]);renderSchedule();updateHomeUI();showToast('Schedule cleared');}
-function downloadTemplate(){
-  const csv='Day;Date;Employee;Start;End\nMonday;02/06/2025;Lloyd;09:00;17:00\nMonday;02/06/2025;Anna;12:00;20:00\nTuesday;03/06/2025;Lloyd;14:00;22:00\nTuesday;03/06/2025;Marcus;08:00;16:00\nWednesday;04/06/2025;Anna;09:00;17:00';
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download='bamnapp_schedule_template.csv';a.click();URL.revokeObjectURL(url);
-  showToast('Template downloaded');
-}
-
+function clearSchedule(){if(!confirm('Clear the rota? It can be reloaded by tapping Refresh.'))return;saveSched([]);renderSchedule();updateHomeUI();showToast('Rota cleared');}
 // ── EXPORT ──
 function setExportRange(range){
   const now=new Date(),fmt=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
@@ -758,7 +819,7 @@ function buildCSV(shifts){
   const rows=shifts.map(s=>{const ms=shiftMs(s);return[fmtD(s.correctedIn||s.clockedIn||s.manualIn),s.clockedIn?fmtDT(s.clockedIn):'',s.clockedOut?fmtDT(s.clockedOut):'',s.correctedIn?fmtDT(s.correctedIn):(s.manualIn?fmtDT(s.manualIn):''),s.correctedOut?fmtDT(s.correctedOut):(s.manualOut?fmtDT(s.manualOut):''),ms?hrs(ms):'0.00',s.manual?'Yes':'No',s.autoClockOut?'Yes':'No',s.correctionReason||''].join(';');});
   return[h.join(';'),...rows].join('\n');
 }
-function updateExportPreview(){const shifts=getExportShifts();const p=document.getElementById('export-preview');if(!shifts.length){p.textContent='No shifts in selected range';return;}const csv=buildCSV(shifts);p.textContent=csv.split('\n').slice(0,4).join('\n')+(shifts.length>3?'\n…':'');}
+function updateExportPreview(){}
 function exportCSV(){const shifts=getExportShifts();if(!shifts.length){showToast('No shifts in selected range');return;}const csv=buildCSV(shifts);const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');const from=document.getElementById('export-from').value,to=document.getElementById('export-to').value;a.href=url;a.download=`bamnapp_shifts_${from}_${to}.csv`;a.click();URL.revokeObjectURL(url);showToast('CSV downloaded');}
 
 // ── NAME ──
@@ -786,8 +847,7 @@ function init(){
   const now=new Date(),fmt=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
   document.getElementById('export-from').value=fmt(new Date(getMonthBounds().start));
   document.getElementById('export-to').value=fmt(now);
-  document.getElementById('export-from').addEventListener('change',updateExportPreview);
-  document.getElementById('export-to').addEventListener('change',updateExportPreview);
+
   document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
   if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
   setInterval(updateHomeUI,60000);
@@ -834,63 +894,3 @@ function renderCalendar(){
   const lastDay=new Date(calYear,calMonth+1,0).getDate();
   const startDow=(first.getDay()+6)%7;
   const monthName=new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric'}).format(first);
-  const dows=['M','T','W','T','F','S','S'];
-  let cells='';
-  for(let i=0;i<startDow;i++)cells+='<div class="cal-cell other-month"></div>';
-  for(let d=1;d<=lastDay;d++){
-    const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday=ds===todayStr;
-    const hasAny=!!allDays[ds];
-    const isMe=myDays.has(ds);
-    // tappable if any shifts exist that day
-    const onclick=hasAny?`onclick="openDayModal('${ds}')"`:'';
-    // highlighted (yellow) only if it's the user's shift day; otherwise subtle dot for other-staff days
-    cells+=`<div class="cal-cell${isMe?' has-shift':''}${hasAny&&!isMe?' has-other':''}${isToday?' today':''}" ${onclick}>
-      <span class="cal-num">${d}</span>${isMe?'<span class="cal-dot"></span>':hasAny?'<span class="cal-dot" style="background:var(--ink3);opacity:0.35"></span>':''}
-    </div>`;
-  }
-  document.getElementById('sched-cal').innerHTML=`
-    <div class="cal-nav">
-      <button onclick="calPrev()">&#8249;</button>
-      <span class="cal-month">${monthName}</span>
-      <button onclick="calNext()">&#8250;</button>
-    </div>
-    <div class="cal-grid">
-      ${dows.map(d=>'<div class="cal-dow">'+d+'</div>').join('')}
-      ${cells}
-    </div>
-    ${!name?'<p style="font-size:13px;color:var(--ink3);text-align:center;margin-top:16px">Set your name in More to see your shifts highlighted</p>':''}
-  `;
-}
-function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
-function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
-function openDayModal(ds){
-  const sched=loadSched();
-  const name=getName().toLowerCase();
-  const dayShifts=sched.filter(s=>getBDS(new Date(s.start))===ds).sort((a,b)=>new Date(a.start)-new Date(b.start));
-  const dateLabel=fmtDayShort(new Date(ds+'T12:00:00'));
-  document.getElementById('modal-day-title').textContent=dateLabel;
-  const myShifts=dayShifts.filter(s=>name&&s.employee.toLowerCase()===name);
-  const othersShifts=dayShifts.filter(s=>!name||s.employee.toLowerCase()!==name);
-  let html='';
-  if(myShifts.length){
-    html+='<div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Your shift</div>';
-    myShifts.forEach(s=>{
-      const ms=new Date(s.end)-new Date(s.start);
-      html+=`<div class="sched-row mine"><div><div class="sched-employee">${s.employee} ★</div><div class="sched-hours">${hrs(ms)} hrs</div></div><div class="sched-time">${fmtT(s.start)} – ${fmtT(s.end)}</div></div>`;
-    });
-  }
-  if(othersShifts.length){
-    html+=`<div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin:${myShifts.length?'14px':'0'}px 0 8px">Also working</div>`;
-    othersShifts.forEach(s=>{
-      const ms=new Date(s.end)-new Date(s.start);
-      html+=`<div class="sched-row"><div><div class="sched-employee">${s.employee}</div><div class="sched-hours">${hrs(ms)} hrs</div></div><div class="sched-time">${fmtT(s.start)} – ${fmtT(s.end)}</div></div>`;
-    });
-  }
-  if(!html)html='<p style="color:var(--ink3);font-size:14px">No shifts scheduled this day.</p>';
-  document.getElementById('modal-day-content').innerHTML=html;
-  openModal('modal-day');
-}
-</script>
-</body>
-</html>
