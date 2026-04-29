@@ -646,8 +646,9 @@ function parseScheduleCSV(text){
       if(parts.length===3){const[d,m,y]=parts;dp=`${y.length===2?'20'+y:y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;}
     } else if(dateStr.match(/^\d{4}-\d{2}-\d{2}$/)){dp=dateStr;}
     if(!dp)continue;
-    const sTime=startStr.includes(':')?startStr+':00':startStr+':00:00';
-    const eTime=endStr.includes(':')?endStr+':00':endStr+':00:00';
+    const norm=t=>{const p=t.split(':');if(p.length>=3)return p[0].padStart(2,'0')+':'+p[1].padStart(2,'0')+':'+p[2].padStart(2,'0');if(p.length===2)return p[0].padStart(2,'0')+':'+p[1].padStart(2,'0')+':00';return t.slice(0,2)+':'+t.slice(2,4)+':00';};
+    const sTime=norm(startStr);
+    const eTime=norm(endStr);
     const sMs=new Date(dp+'T'+sTime).getTime();
     let eMs=new Date(dp+'T'+eTime).getTime();
     if(isNaN(sMs)||isNaN(eMs))continue;
