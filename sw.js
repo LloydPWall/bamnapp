@@ -1,4 +1,4 @@
-const CACHE = 'bamnapp-v13';
+const CACHE = 'bamnapp-v14';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
