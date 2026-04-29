@@ -968,6 +968,7 @@ function parseResvCSV(text){
   const iDate=header.findIndex(h=>h==='date');
   const iName=header.findIndex(h=>h==='name');
   const iGuests=header.findIndex(h=>h==='guests');
+  const iTime=header.findIndex(h=>['time','arrival','time of arrival'].includes(h));
   const iContact=header.findIndex(h=>['contact','phone','email'].includes(h));
   const iNotes=header.findIndex(h=>['notes','note'].includes(h));
   if(iDate===-1||iName===-1){showToast('Bookings CSV format not recognised');return[];}
@@ -978,7 +979,7 @@ function parseResvCSV(text){
     if(dateStr.includes('/')){const p=dateStr.split('/');if(p.length===3){const[d,m,y]=p;dp=`${y.length===2?'20'+y:y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;}}
     else if(dateStr.match(/^\d{4}-\d{2}-\d{2}$/))dp=dateStr;
     if(!dp)return null;
-    return{day:iDay!==-1?c[iDay]||'':'',date:dp,name:c[iName]||'',guests:iGuests!==-1?c[iGuests]||'':'',contact:iContact!==-1?c[iContact]||'':'',notes:iNotes!==-1?c[iNotes]||'':''};
+    return{day:iDay!==-1?c[iDay]||'':'',date:dp,name:c[iName]||'',time:iTime!==-1?c[iTime]||'':'',guests:iGuests!==-1?c[iGuests]||'':'',contact:iContact!==-1?c[iContact]||'':'',notes:iNotes!==-1?c[iNotes]||'':''};
   }).filter(Boolean);
 }
 let resvCalYear, resvCalMonth;
@@ -1033,7 +1034,7 @@ function renderResvCalendar(){
 function resvCalPrev(){resvCalMonth--;if(resvCalMonth<0){resvCalMonth=11;resvCalYear--;}renderResvCalendar();}
 function resvCalNext(){resvCalMonth++;if(resvCalMonth>11){resvCalMonth=0;resvCalYear++;}renderResvCalendar();}
 function openResvDayModal(ds){
-  const all=loadResv().filter(r=>r.date===ds).sort((a,b)=>a.name.localeCompare(b.name));
+  const all=loadResv().filter(r=>r.date===ds).sort((a,b)=>(a.time||'').localeCompare(b.time||'')||a.name.localeCompare(b.name));
   const dateLabel=fmtDayShort(new Date(ds+'T12:00:00'));
   document.getElementById('modal-resv-day-title').textContent=dateLabel;
   const total=all.reduce((s,r)=>s+(parseInt(r.guests)||0),0);
@@ -1041,7 +1042,7 @@ function openResvDayModal(ds){
   html+=all.map(r=>`<div class="resv-row">
     <div style="display:flex;justify-content:space-between;align-items:baseline">
       <div class="resv-name">${r.name}</div>
-      <div style="font-size:13px;font-weight:500;color:var(--ink3)">${r.guests?r.guests+' guest'+((parseInt(r.guests)||0)!==1?'s':''):''}</div>
+      <div style="font-size:13px;font-weight:500;color:var(--ink3)">${r.time?r.time+' &nbsp;·&nbsp; ':''} ${r.guests?r.guests+' guest'+((parseInt(r.guests)||0)!==1?'s':''):''}</div>
     </div>
     ${r.contact?`<div class="resv-meta">${r.contact}</div>`:''}
     ${r.notes?`<div class="resv-note">${r.notes}</div>`:''}
