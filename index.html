@@ -108,6 +108,8 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .cal-cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:default;position:relative;}
 .cal-cell.has-shift{background:var(--yolk-pale);border:1px solid var(--yolk);cursor:pointer;}
 .cal-cell.has-shift:active{background:var(--yolk-light)}
+.cal-cell.has-other{cursor:pointer;}
+.cal-cell.has-other:active{background:var(--paper2)}
 .cal-cell.today .cal-num{background:var(--ink);color:var(--yolk-light);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
 .cal-cell.other-month{opacity:0.25}
 .cal-num{font-size:13px;color:var(--ink);line-height:1}
@@ -238,20 +240,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
         <button class="btn-small" onclick="downloadTemplate()">⬇ Template</button>
         <button class="btn-small" style="color:var(--warn)" onclick="clearSchedule()">Clear</button>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <div class="view-toggle">
-          <button id="sched-view-list" class="active" onclick="setSchedView('list')">List</button>
-          <button id="sched-view-cal" onclick="setSchedView('cal')">Calendar</button>
-        </div>
-        <div class="shifts-filter" id="sched-filter-row" style="padding:0;margin:0">
-          <button class="filter-btn active" onclick="setSchedFilter(this,'all')">All</button>
-          <button class="filter-btn" onclick="setSchedFilter(this,'today')">Today</button>
-          <button class="filter-btn" onclick="setSchedFilter(this,'week')">Week</button>
-          <button class="filter-btn" onclick="setSchedFilter(this,'month')">Month</button>
-        </div>
-      </div>
-      <div id="sched-list"></div>
-      <div id="sched-cal" style="display:none"></div>
+      <div id="sched-cal"></div>
     </div>
 
     <!-- MORE (Export + About merged) -->
@@ -302,7 +291,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       </div>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v1.2.0</div>
+      <div class="version-tag">BamnApp v1.3.0</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2025 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -526,6 +515,16 @@ function updateHomeUI(){
   if(flagged.length)fc.innerHTML=`<div class="card warn"><div class="card-label">Needs attention</div><div style="font-size:14px;color:#8b3010;line-height:1.7">${flagged.length} shift${flagged.length>1?'s':''} flagged — auto-clocked out. Please review.</div><button class="btn-small" style="margin-top:10px;border-color:#e8b8a8;color:#8b3010" onclick="showScreen('shifts',document.getElementById('nav-shifts'))">Review →</button></div>`;
 }
 
+function smartDayLabel(isoStr){
+  const todayStr=getBDS(new Date());
+  const tomorrowDate=new Date();tomorrowDate.setDate(tomorrowDate.getDate()+1);
+  const tomorrowStr=getBDS(tomorrowDate);
+  const ds=getBDS(new Date(isoStr));
+  const dateLabel=fmtD(new Date(isoStr));
+  if(ds===todayStr) return `Today &nbsp;<span style="font-weight:300;font-size:14px;color:var(--ink3)">${dateLabel}</span>`;
+  if(ds===tomorrowStr) return `Tomorrow &nbsp;<span style="font-weight:300;font-size:14px;color:var(--ink3)">${dateLabel}</span>`;
+  return `${new Intl.DateTimeFormat('en-GB',{timeZone:TZ,weekday:'long'}).format(new Date(isoStr))} &nbsp;<span style="font-weight:300;font-size:14px;color:var(--ink3)">${dateLabel}</span>`;
+}
 function renderNextShift(){
   const card=document.getElementById('next-shift-card');
   const name=getName().toLowerCase();if(!name){card.innerHTML='';return;}
@@ -533,7 +532,12 @@ function renderNextShift(){
   const upcoming=loadSched().filter(s=>s.employee.toLowerCase()===name&&new Date(s.start).getTime()>now).sort((a,b)=>new Date(a.start)-new Date(b.start));
   if(!upcoming.length){card.innerHTML='';return;}
   const n=upcoming[0],ms=new Date(n.end)-new Date(n.start);
-  card.innerHTML=`<div class="card accent"><div class="card-label">Next shift</div><div style="font-size:17px;font-weight:500;color:var(--ink);margin-bottom:2px">${fmtDayShort(n.start)}</div><div style="font-size:15px;color:var(--ink3)">${fmtT(n.start)} – ${fmtT(n.end)} &nbsp;·&nbsp; ${hrs(ms)} hrs</div></div>`;
+  const ds=getBDS(new Date(n.start));
+  card.innerHTML=`<div class="card accent" style="cursor:pointer;user-select:none" onclick="openDayModal('${ds}')">
+    <div class="card-label">Next shift &nbsp;<span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:11px">tap for details</span></div>
+    <div style="font-size:17px;font-weight:500;color:var(--ink);margin-bottom:2px">${smartDayLabel(n.start)}</div>
+    <div style="font-size:15px;color:var(--ink3)">${fmtT(n.start)} – ${fmtT(n.end)} &nbsp;·&nbsp; ${hrs(ms)} hrs</div>
+  </div>`;
 }
 
 function renderProjectedHome(){
@@ -701,11 +705,11 @@ function filterSched(sched,f){
     return true;});
 }
 function renderSchedule(){
-  const all=loadSched(),list=document.getElementById('sched-list'),label=document.getElementById('sched-period-label');
+  const all=loadSched(),label=document.getElementById('sched-period-label');
   if(!all.length){
     label.textContent='No schedule loaded';
     document.getElementById('sched-proj-card').innerHTML='';
-    list.innerHTML=`<div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg><p>Upload a schedule file from your manager</p></div>`;
+    document.getElementById('sched-cal').innerHTML=`<div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg><p>Upload a schedule file from your manager</p></div>`;
     return;
   }
   const dates=all.map(s=>new Date(s.start).getTime()).sort((a,b)=>a-b);
@@ -721,19 +725,7 @@ function renderSchedule(){
   } else {
     document.getElementById('sched-proj-card').innerHTML='';
   }
-  const filtered=filterSched(all,curSchedFilter);
-  if(!filtered.length){list.innerHTML=`<div class="empty"><p>No shifts in this period</p></div>`;return;}
-  const grouped={};
-  filtered.forEach(s=>{const ds=getBDS(new Date(s.start));if(!grouped[ds])grouped[ds]=[];grouped[ds].push(s);});
-  list.innerHTML=Object.keys(grouped).sort().map(ds=>{
-    const dayShifts=grouped[ds].sort((a,b)=>new Date(a.start)-new Date(b.start));
-    const rows=dayShifts.map(s=>{
-      const isMe=name&&s.employee.toLowerCase()===name;
-      const ms=new Date(s.end)-new Date(s.start);
-      return`<div class="sched-row ${isMe?'mine':''}"><div><div class="sched-employee">${s.employee}${isMe?' ★':''}</div><div class="sched-hours">${hrs(ms)} hrs</div></div><div class="sched-time">${fmtT(s.start)} – ${fmtT(s.end)}</div></div>`;
-    }).join('');
-    return`<div class="sched-day"><div class="sched-day-header">${fmtDayShort(new Date(ds+'T12:00:00'))}</div>${rows}</div>`;
-  }).join('');
+  renderCalendar();
 }
 function clearSchedule(){if(!confirm('Clear the schedule? This cannot be undone.'))return;saveSched([]);renderSchedule();updateHomeUI();showToast('Schedule cleared');}
 function downloadTemplate(){
@@ -821,46 +813,40 @@ document.addEventListener('DOMContentLoaded',init);
 })();
 
 // ── CALENDAR VIEW ──
-let calYear, calMonth, schedView='list';
-function setSchedView(v){
-  schedView=v;
-  document.getElementById('sched-view-list').classList.toggle('active',v==='list');
-  document.getElementById('sched-view-cal').classList.toggle('active',v==='cal');
-  document.getElementById('sched-list').style.display=v==='list'?'block':'none';
-  document.getElementById('sched-filter-row').style.display=v==='list'?'flex':'none';
-  document.getElementById('sched-cal').style.display=v==='cal'?'block':'none';
-  if(v==='cal')renderCalendar();
-}
+let calYear, calMonth;
 function renderCalendar(){
   const now=new Date();
   if(calYear===undefined){calYear=parseInt(getBDS(now).slice(0,4));calMonth=parseInt(getBDS(now).slice(5,7))-1;}
   const sched=loadSched();
   const name=getName().toLowerCase();
-  // Build a set of YYYY-MM-DD dates the user works
-  const myDays={};
-  sched.filter(s=>name&&s.employee.toLowerCase()===name).forEach(s=>{
+  // All days that have any shifts (tappable)
+  const allDays={};
+  sched.forEach(s=>{
     const ds=getBDS(new Date(s.start));
-    if(!myDays[ds])myDays[ds]=[];
-    myDays[ds].push(s);
+    if(!allDays[ds])allDays[ds]=[];
+    allDays[ds].push(s);
   });
+  // Days the user personally works (highlighted)
+  const myDays=new Set();
+  if(name) sched.filter(s=>s.employee.toLowerCase()===name).forEach(s=>myDays.add(getBDS(new Date(s.start))));
   const todayStr=getBDS(now);
-  // First day of month
   const first=new Date(calYear,calMonth,1);
   const lastDay=new Date(calYear,calMonth+1,0).getDate();
-  // Day of week of first (0=Sun, make Mon=0)
   const startDow=(first.getDay()+6)%7;
   const monthName=new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric'}).format(first);
   const dows=['M','T','W','T','F','S','S'];
   let cells='';
-  // Empty cells before first
   for(let i=0;i<startDow;i++)cells+='<div class="cal-cell other-month"></div>';
   for(let d=1;d<=lastDay;d++){
     const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isToday=ds===todayStr;
-    const hasShift=!!myDays[ds];
-    const onclick=hasShift?`onclick="openDayModal('${ds}')"`:'';
-    cells+=`<div class="cal-cell${hasShift?' has-shift':''}${isToday?' today':''}" ${onclick}>
-      <span class="cal-num">${d}</span>${hasShift?'<span class="cal-dot"></span>':''}
+    const hasAny=!!allDays[ds];
+    const isMe=myDays.has(ds);
+    // tappable if any shifts exist that day
+    const onclick=hasAny?`onclick="openDayModal('${ds}')"`:'';
+    // highlighted (yellow) only if it's the user's shift day; otherwise subtle dot for other-staff days
+    cells+=`<div class="cal-cell${isMe?' has-shift':''}${hasAny&&!isMe?' has-other':''}${isToday?' today':''}" ${onclick}>
+      <span class="cal-num">${d}</span>${isMe?'<span class="cal-dot"></span>':hasAny?'<span class="cal-dot" style="background:var(--ink3);opacity:0.35"></span>':''}
     </div>`;
   }
   document.getElementById('sched-cal').innerHTML=`
@@ -873,7 +859,7 @@ function renderCalendar(){
       ${dows.map(d=>'<div class="cal-dow">'+d+'</div>').join('')}
       ${cells}
     </div>
-    ${!name?'<p style="font-size:13px;color:var(--ink3);text-align:center;margin-top:16px">Set your name in More → About to see your shifts highlighted</p>':''}
+    ${!name?'<p style="font-size:13px;color:var(--ink3);text-align:center;margin-top:16px">Set your name in More to see your shifts highlighted</p>':''}
   `;
 }
 function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
