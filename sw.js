@@ -1,4 +1,4 @@
-const CACHE = 'bamnapp-v8';
+const CACHE = 'bamnapp-v9';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -18,3 +18,4 @@ self.addEventListener('fetch', e => {
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
 });
+
