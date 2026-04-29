@@ -98,6 +98,26 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .audit-item{border-top:1px solid var(--paper3);padding:10px 0;font-size:13px;color:var(--ink3)}.audit-item:first-child{border-top:none}.audit-item strong{color:var(--ink);font-weight:500}
 .empty{text-align:center;padding:40px 20px;color:var(--ink3)}.empty svg{width:44px;height:44px;margin:0 auto 12px;display:block;opacity:0.25}.empty p{font-size:14px}
 .date-range{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* Calendar */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cal-nav button{background:none;border:1px solid var(--paper3);border-radius:var(--radius-sm);width:36px;height:36px;cursor:pointer;font-size:18px;color:var(--ink3);display:flex;align-items:center;justify-content:center;}
+.cal-nav button:active{opacity:0.6}
+.cal-month{font-family:var(--serif);font-size:20px;color:var(--ink)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-dow{font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink3);text-align:center;padding:4px 0 6px}
+.cal-cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:default;position:relative;}
+.cal-cell.has-shift{background:var(--yolk-pale);border:1px solid var(--yolk);cursor:pointer;}
+.cal-cell.has-shift:active{background:var(--yolk-light)}
+.cal-cell.today .cal-num{background:var(--ink);color:var(--yolk-light);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
+.cal-cell.other-month{opacity:0.25}
+.cal-num{font-size:13px;color:var(--ink);line-height:1}
+.cal-dot{width:5px;height:5px;border-radius:50%;background:var(--yolk);margin-top:2px}
+/* View toggle */
+.view-toggle{display:flex;gap:0;margin-bottom:14px;border:1px solid var(--paper3);border-radius:var(--radius-sm);overflow:hidden;width:fit-content}
+.view-toggle button{background:none;border:none;padding:7px 16px;font-family:var(--sans);font-size:12px;font-weight:500;color:var(--ink3);cursor:pointer;transition:all 0.12s;}
+.view-toggle button.active{background:var(--ink);color:var(--yolk-light)}
+/* Day popup */
+#modal-day .sched-row{margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -214,22 +234,31 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
         <small>Tap to choose a .csv file from your manager</small>
       </div>
       <input type="file" id="sched-file-input" accept=".csv" style="display:none" onchange="handleScheduleUpload(event)"/>
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-        <button class="btn-small" onclick="downloadTemplate()">⬇ Download template</button>
-        <button class="btn-small" style="color:var(--warn)" onclick="clearSchedule()">Clear schedule</button>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="btn-small" onclick="downloadTemplate()">⬇ Template</button>
+        <button class="btn-small" style="color:var(--warn)" onclick="clearSchedule()">Clear</button>
       </div>
-      <div class="shifts-filter" id="sched-filter-row">
-        <button class="filter-btn active" onclick="setSchedFilter(this,'all')">All</button>
-        <button class="filter-btn" onclick="setSchedFilter(this,'today')">Today</button>
-        <button class="filter-btn" onclick="setSchedFilter(this,'week')">This week</button>
-        <button class="filter-btn" onclick="setSchedFilter(this,'month')">This month</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div class="view-toggle">
+          <button id="sched-view-list" class="active" onclick="setSchedView('list')">List</button>
+          <button id="sched-view-cal" onclick="setSchedView('cal')">Calendar</button>
+        </div>
+        <div class="shifts-filter" id="sched-filter-row" style="padding:0;margin:0">
+          <button class="filter-btn active" onclick="setSchedFilter(this,'all')">All</button>
+          <button class="filter-btn" onclick="setSchedFilter(this,'today')">Today</button>
+          <button class="filter-btn" onclick="setSchedFilter(this,'week')">Week</button>
+          <button class="filter-btn" onclick="setSchedFilter(this,'month')">Month</button>
+        </div>
       </div>
       <div id="sched-list"></div>
+      <div id="sched-cal" style="display:none"></div>
     </div>
 
-    <!-- EXPORT -->
-    <div id="screen-export" class="screen">
-      <div class="page-header"><h1>Export</h1><p>Download your shift data as a CSV</p></div>
+    <!-- MORE (Export + About merged) -->
+    <div id="screen-more" class="screen">
+      <div class="page-header"><h1>More</h1></div>
+
+      <div class="section-title" style="margin-top:0;border-top:none;padding-top:0">Export shifts</div>
       <div class="date-range" style="margin-bottom:10px">
         <div class="form-group"><label class="form-label">From</label><input class="form-input" type="date" id="export-from"/></div>
         <div class="form-group"><label class="form-label">To</label><input class="form-input" type="date" id="export-to"/></div>
@@ -242,13 +271,9 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
         <button class="btn-small" onclick="setExportRange('all')">All time</button>
       </div>
       <button class="btn-primary" onclick="exportCSV()">Download CSV</button>
-      <div class="section-title">Preview</div>
-      <div id="export-preview" style="font-size:12px;color:var(--ink3);word-break:break-all;background:#fff;border:1px solid var(--paper3);border-radius:var(--radius-sm);padding:12px;min-height:60px;font-family:monospace;white-space:pre-wrap;line-height:1.6"></div>
-    </div>
+      <div style="font-size:12px;color:var(--ink3);word-break:break-all;background:#fff;border:1px solid var(--paper3);border-radius:var(--radius-sm);padding:12px;min-height:48px;font-family:monospace;white-space:pre-wrap;line-height:1.6;margin-top:10px" id="export-preview"></div>
 
-    <!-- ABOUT -->
-    <div id="screen-info" class="screen">
-      <div class="page-header"><h1>About</h1></div>
+      <div class="section-title">About</div>
       <div class="info-block">
         <h3>What BamnApp is</h3>
         <p>An informal, employee-facing shift tracker. Not the official payroll or HR record. Use it to track your own hours and raise discrepancies with your manager.</p>
@@ -277,7 +302,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       </div>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v1.1.0</div>
+      <div class="version-tag">BamnApp v1.2.0</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2025 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -296,11 +321,8 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
     <button onclick="showScreen('schedule',this)" id="nav-schedule">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>Schedule
     </button>
-    <button onclick="showScreen('export',this)" id="nav-export">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export
-    </button>
-    <button onclick="showScreen('info',this)" id="nav-info">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>About
+    <button onclick="showScreen('more',this)" id="nav-more">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg>More
     </button>
   </nav>
 </div>
@@ -350,6 +372,15 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
     <div class="form-group"><label class="form-label">First name</label><input class="form-input" type="text" id="change-name-input" maxlength="40"/></div>
     <button class="btn-primary" onclick="saveNameChange()">Save</button>
     <button class="btn-secondary" onclick="closeModal('modal-name')">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-day">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-title" id="modal-day-title"></div>
+    <div id="modal-day-content"></div>
+    <button class="btn-secondary" onclick="closeModal('modal-day')" style="margin-top:8px">Close</button>
   </div>
 </div>
 
@@ -444,16 +475,19 @@ function handleClockBtn(){
 
 // ── NAV ──
 let curFilter='all', curSchedFilter='all';
+const SCREENS=['home','shifts','schedule','more'];
+let curScreenIdx=0;
 function showScreen(name,btn){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  const idx=SCREENS.indexOf(name);if(idx!==-1)curScreenIdx=idx;
   if(btn)btn.classList.add('active');
+  else{const nb=document.getElementById('nav-'+(name==='more'?'more':name));if(nb)nb.classList.add('active');}
   if(name==='shifts')renderShifts();
   if(name==='schedule')renderSchedule();
-  if(name==='export')updateExportPreview();
+  if(name==='more'){updateExportPreview();const n=getName();document.getElementById('info-name-display').textContent=n?'Saved as: '+n:'No name saved.';}
   if(name==='home')updateHomeUI();
-  if(name==='info'){const n=getName();document.getElementById('info-name-display').textContent=n?'Saved as: '+n:'No name saved.';}
 }
 function openModal(id){document.getElementById(id).classList.add('open')}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
@@ -767,6 +801,110 @@ function init(){
   setInterval(updateHomeUI,60000);
 }
 document.addEventListener('DOMContentLoaded',init);
+
+// ── SWIPE NAVIGATION ──
+(function(){
+  let x0=null,y0=null;
+  const wrap=document.getElementById('screen-wrap');
+  wrap.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY;},{passive:true});
+  wrap.addEventListener('touchend',e=>{
+    if(x0===null)return;
+    const dx=e.changedTouches[0].clientX-x0;
+    const dy=e.changedTouches[0].clientY-y0;
+    x0=null;y0=null;
+    // Only register horizontal swipes more than 60px, and less vertical than horizontal
+    if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx)*0.8)return;
+    const next=dx<0?Math.min(curScreenIdx+1,SCREENS.length-1):Math.max(curScreenIdx-1,0);
+    if(next===curScreenIdx)return;
+    showScreen(SCREENS[next],null);
+  },{passive:true});
+})();
+
+// ── CALENDAR VIEW ──
+let calYear, calMonth, schedView='list';
+function setSchedView(v){
+  schedView=v;
+  document.getElementById('sched-view-list').classList.toggle('active',v==='list');
+  document.getElementById('sched-view-cal').classList.toggle('active',v==='cal');
+  document.getElementById('sched-list').style.display=v==='list'?'block':'none';
+  document.getElementById('sched-filter-row').style.display=v==='list'?'flex':'none';
+  document.getElementById('sched-cal').style.display=v==='cal'?'block':'none';
+  if(v==='cal')renderCalendar();
+}
+function renderCalendar(){
+  const now=new Date();
+  if(calYear===undefined){calYear=parseInt(getBDS(now).slice(0,4));calMonth=parseInt(getBDS(now).slice(5,7))-1;}
+  const sched=loadSched();
+  const name=getName().toLowerCase();
+  // Build a set of YYYY-MM-DD dates the user works
+  const myDays={};
+  sched.filter(s=>name&&s.employee.toLowerCase()===name).forEach(s=>{
+    const ds=getBDS(new Date(s.start));
+    if(!myDays[ds])myDays[ds]=[];
+    myDays[ds].push(s);
+  });
+  const todayStr=getBDS(now);
+  // First day of month
+  const first=new Date(calYear,calMonth,1);
+  const lastDay=new Date(calYear,calMonth+1,0).getDate();
+  // Day of week of first (0=Sun, make Mon=0)
+  const startDow=(first.getDay()+6)%7;
+  const monthName=new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric'}).format(first);
+  const dows=['M','T','W','T','F','S','S'];
+  let cells='';
+  // Empty cells before first
+  for(let i=0;i<startDow;i++)cells+='<div class="cal-cell other-month"></div>';
+  for(let d=1;d<=lastDay;d++){
+    const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=ds===todayStr;
+    const hasShift=!!myDays[ds];
+    const onclick=hasShift?`onclick="openDayModal('${ds}')"`:'';
+    cells+=`<div class="cal-cell${hasShift?' has-shift':''}${isToday?' today':''}" ${onclick}>
+      <span class="cal-num">${d}</span>${hasShift?'<span class="cal-dot"></span>':''}
+    </div>`;
+  }
+  document.getElementById('sched-cal').innerHTML=`
+    <div class="cal-nav">
+      <button onclick="calPrev()">&#8249;</button>
+      <span class="cal-month">${monthName}</span>
+      <button onclick="calNext()">&#8250;</button>
+    </div>
+    <div class="cal-grid">
+      ${dows.map(d=>'<div class="cal-dow">'+d+'</div>').join('')}
+      ${cells}
+    </div>
+    ${!name?'<p style="font-size:13px;color:var(--ink3);text-align:center;margin-top:16px">Set your name in More → About to see your shifts highlighted</p>':''}
+  `;
+}
+function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
+function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
+function openDayModal(ds){
+  const sched=loadSched();
+  const name=getName().toLowerCase();
+  const dayShifts=sched.filter(s=>getBDS(new Date(s.start))===ds).sort((a,b)=>new Date(a.start)-new Date(b.start));
+  const dateLabel=fmtDayShort(new Date(ds+'T12:00:00'));
+  document.getElementById('modal-day-title').textContent=dateLabel;
+  const myShifts=dayShifts.filter(s=>name&&s.employee.toLowerCase()===name);
+  const othersShifts=dayShifts.filter(s=>!name||s.employee.toLowerCase()!==name);
+  let html='';
+  if(myShifts.length){
+    html+='<div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Your shift</div>';
+    myShifts.forEach(s=>{
+      const ms=new Date(s.end)-new Date(s.start);
+      html+=`<div class="sched-row mine"><div><div class="sched-employee">${s.employee} ★</div><div class="sched-hours">${hrs(ms)} hrs</div></div><div class="sched-time">${fmtT(s.start)} – ${fmtT(s.end)}</div></div>`;
+    });
+  }
+  if(othersShifts.length){
+    html+=`<div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin:${myShifts.length?'14px':'0'}px 0 8px">Also working</div>`;
+    othersShifts.forEach(s=>{
+      const ms=new Date(s.end)-new Date(s.start);
+      html+=`<div class="sched-row"><div><div class="sched-employee">${s.employee}</div><div class="sched-hours">${hrs(ms)} hrs</div></div><div class="sched-time">${fmtT(s.start)} – ${fmtT(s.end)}</div></div>`;
+    });
+  }
+  if(!html)html='<p style="color:var(--ink3);font-size:14px">No shifts scheduled this day.</p>';
+  document.getElementById('modal-day-content').innerHTML=html;
+  openModal('modal-day');
+}
 </script>
 </body>
 </html>
