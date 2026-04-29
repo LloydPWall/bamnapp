@@ -172,7 +172,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
   </div>
   <div style="text-align:center;margin-bottom:20px;padding-top:8px">
     <p style="font-size:12px;color:#666;letter-spacing:0.04em">Designed by <strong style="color:#999;font-weight:500">Lloyd Wall</strong></p>
-    <p style="font-size:11px;color:#555;margin-top:4px;letter-spacing:0.03em">© 2025 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
+    <p style="font-size:11px;color:#555;margin-top:4px;letter-spacing:0.03em">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
   </div>
   <button class="onboard-btn" onclick="acknowledgeOnboarding()">I understand — take me to the app</button>
 </div>
@@ -197,9 +197,15 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 
     <!-- HOME -->
     <div id="screen-home" class="screen active">
-      <div class="page-header">
-        <div class="wordmark">BamnApp</div>
-        <p id="home-date"></p>
+      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <div class="wordmark">BamnApp</div>
+          <p id="home-date"></p>
+        </div>
+        <button id="global-refresh-btn" onclick="globalRefresh()" style="background:none;border:1px solid var(--paper3);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;color:var(--ink3);cursor:pointer;margin-top:28px;display:flex;align-items:center;gap:5px;font-family:var(--sans);">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
       </div>
       <div id="clock-btn-wrap">
         <button id="clock-btn" onclick="handleClockBtn()">
@@ -273,7 +279,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
         <button class="btn-small primary" onclick="refreshTips()">↻ Refresh</button>
       </div>
       <div class="info-block" style="background:var(--yolk-pale);border-color:#e8d890;margin-bottom:16px">
-        <p style="font-size:12px;color:var(--yolk-dim);line-height:1.6">Estimates only. Based on your logged times and scheduled colleague hours. Actual amounts may differ. Service hours: Mon–Thu 18:00–23:59 · Fri–Sat 12:00–23:59 · Sun 12:00–18:00.</p>
+        <p style="font-size:12px;color:var(--yolk-dim);line-height:1.6">Estimates only. Based on your logged times and scheduled colleague hours. Actual amounts may differ. Service hours: Mon–Thu 18:00–22:30 · Fri–Sat 12:00–23:30 · Sun 12:00–17:00.</p>
       </div>
       <div id="tips-list"></div>
     </div>
@@ -331,10 +337,10 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v1.7.0</div>
+      <div class="version-tag">BamnApp v1.8.0</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
-        <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2025 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
+        <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
       </div>
     </div>
   </div>
@@ -354,7 +360,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Bookings
     </button>
     <button onclick="showScreen('tips',this)" id="nav-tips">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Tips
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17.5 8.5A6 6 0 1 0 17.5 15.5"/><line x1="3" y1="10" x2="14" y2="10"/><line x1="3" y1="14" x2="14" y2="14"/></svg>Tips
     </button>
     <button onclick="showScreen('more',this)" id="nav-more">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg>More
@@ -616,13 +622,34 @@ function renderProjectedHome(){
   const card=document.getElementById('projected-home-card');
   const name=getName().toLowerCase();if(!name){card.innerHTML='';return;}
   const sched=loadSched();if(!sched.length){card.innerHTML='';return;}
-  const mine=sched.filter(s=>s.employee.toLowerCase()===name);if(!mine.length){card.innerHTML='';return;}
-  const totalMs=mine.reduce((a,s)=>a+(new Date(s.end)-new Date(s.start)),0);
+  // Filter to THIS WEEK only (Mon–Sun)
+  const wb=getWeekBounds();
+  const mine=sched.filter(s=>s.employee.toLowerCase()===name&&new Date(s.start).getTime()>=wb.start&&new Date(s.start).getTime()<wb.end);
+  if(!mine.length){card.innerHTML='';return;}
+  // Scheduled hours this week
+  const scheduledMs=mine.reduce((a,s)=>a+(new Date(s.end)-new Date(s.start)),0);
+  // Actual hours worked this week — use real shift data where available, fall back to schedule
   const now=Date.now();
-  const doneMs=mine.filter(s=>new Date(s.end).getTime()<=now).reduce((a,s)=>a+(new Date(s.end)-new Date(s.start)),0);
-  const pct=totalMs>0?Math.min(100,Math.round(doneMs/totalMs*100)):0;
-  const dates=mine.map(s=>new Date(s.start).getTime()).sort((a,b)=>a-b);
-  card.innerHTML=`<div class="card"><div class="card-label">Projected hours · ${fmtD(dates[0])} – ${fmtD(dates[dates.length-1])}</div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px"><span style="font-family:var(--serif);font-size:28px">${hrs(doneMs)}</span><span style="font-size:13px;color:var(--ink3)">of ${hrs(totalMs)} hrs scheduled</span></div><div class="proj-bar-wrap"><div class="proj-bar" style="width:${pct}%"></div></div><div style="font-size:12px;color:var(--ink3);margin-top:4px">${pct}% complete · ${mine.length} shift${mine.length!==1?'s':''} in schedule</div></div>`;
+  const allShifts=loadShifts();
+  let workedMs=0;
+  mine.forEach(s=>{
+    const ds=getBDS(new Date(s.start));
+    // Find actual clocked shift for this day
+    const actual=allShifts.find(sh=>{
+      const t=sh.correctedIn||sh.clockedIn||sh.manualIn;
+      return t&&getBDS(new Date(t))===ds;
+    });
+    if(actual&&new Date(actual.correctedOut||actual.clockedOut||actual.manualOut||0).getTime()<=now){
+      // Use actual worked time
+      workedMs+=shiftMs(actual);
+    } else if(new Date(s.end).getTime()<=now){
+      // Shift passed but no actual data — use scheduled
+      workedMs+=new Date(s.end)-new Date(s.start);
+    }
+  });
+  const pct=scheduledMs>0?Math.min(100,Math.round(workedMs/scheduledMs*100)):0;
+  const {start,end}=wb;
+  card.innerHTML=`<div class="card"><div class="card-label">This week · ${fmtD(start)} – ${fmtD(end-86400000)}</div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px"><span style="font-family:var(--serif);font-size:28px">${hrs(workedMs)}</span><span style="font-size:13px;color:var(--ink3)">of ${hrs(scheduledMs)} hrs scheduled</span></div><div class="proj-bar-wrap"><div class="proj-bar" style="width:${pct}%"></div></div><div style="font-size:12px;color:var(--ink3);margin-top:4px">${pct}% complete · ${mine.length} shift${mine.length!==1?'s':''} this week</div></div>`;
 }
 
 let durInt;
@@ -943,6 +970,20 @@ function mergeRestoredShifts(restored){
   saveShifts(merged);
 }
 
+async function globalRefresh(){
+  const btn=document.getElementById('global-refresh-btn');
+  btn.style.opacity='0.5';btn.style.pointerEvents='none';
+  showToast('Refreshing all data…');
+  await Promise.allSettled([
+    refreshSchedule(),
+    refreshReservations(),
+    refreshTips()
+  ]);
+  btn.style.opacity='';btn.style.pointerEvents='';
+  updateHomeUI();
+  showToast('All data refreshed');
+}
+
 document.addEventListener('DOMContentLoaded',init);
 
 // ── SWIPE NAVIGATION ──
@@ -1039,6 +1080,33 @@ function openDayModal(ds){
     });
   }
   if(!html)html='<p style="color:var(--ink3);font-size:14px">No shifts scheduled this day.</p>';
+  // Add bookings info — cross-referenced with user's shift times if available
+  const resv=loadResv().filter(r=>r.date===ds);
+  if(resv.length){
+    const userShift=myShifts[0];
+    let bookingHtml='';
+    if(userShift){
+      // Cross-reference: count bookings where time falls within user's scheduled shift
+      const shiftStart=fmtT(userShift.start),shiftEnd=fmtT(userShift.end);
+      const during=resv.filter(r=>{
+        if(!r.time)return true; // no time = include
+        return r.time>=shiftStart&&r.time<=shiftEnd;
+      });
+      const totalGuests=during.reduce((a,r)=>a+(parseInt(r.guests)||0),0);
+      bookingHtml=`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--paper3)">
+        <div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Bookings during your shift</div>
+        <div style="font-size:14px;color:var(--ink)">${during.length} reservation${during.length!==1?'s':''} · ${totalGuests} guest${totalGuests!==1?'s':''}</div>
+        ${during.map(r=>`<div style="font-size:12px;color:var(--ink3);margin-top:4px">${r.time?r.time+' · ':''}${r.name}${r.guests?' ('+r.guests+')':''}</div>`).join('')}
+      </div>`;
+    } else {
+      const total=resv.length,guests=resv.reduce((a,r)=>a+(parseInt(r.guests)||0),0);
+      bookingHtml=`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--paper3)">
+        <div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Bookings this day</div>
+        <div style="font-size:14px;color:var(--ink)">${total} reservation${total!==1?'s':''} · ${guests} guest${guests!==1?'s':''}</div>
+      </div>`;
+    }
+    html+=bookingHtml;
+  }
   document.getElementById('modal-day-content').innerHTML=html;
   openModal('modal-day');
 }
@@ -1196,9 +1264,9 @@ function parseTipsCSV(text){
 // Service hours by weekday (0=Sun,1=Mon…6=Sat) — returns {start,end} in minutes from midnight
 function serviceMins(dateStr){
   const dow=new Date(dateStr+'T12:00:00').getDay();
-  if(dow===0) return{start:12*60,end:18*60};            // Sun 12:00–18:00
-  if(dow>=1&&dow<=4) return{start:18*60,end:24*60-1};   // Mon–Thu 18:00–23:59
-  return{start:12*60,end:24*60-1};                       // Fri–Sat 12:00–23:59
+  if(dow===0) return{start:12*60,end:17*60};            // Sun 12:00–17:00
+  if(dow>=1&&dow<=4) return{start:18*60,end:22*60+30}; // Mon–Thu 18:00–22:30
+  return{start:12*60,end:23*60+30};                      // Fri–Sat 12:00–23:30
 }
 
 // Overlap in minutes between [aStart,aEnd] and [bStart,bEnd]
@@ -1234,7 +1302,8 @@ function estimateTip(dateStr, totalTips){
 
   // Colleagues from schedule for this day (excluding me)
   const name=getName().toLowerCase();
-  const sched=loadSched().filter(s=>getBDS(new Date(s.start))===dateStr&&s.employee.toLowerCase()!==name);
+  const TIPS_EXCLUDED=['häran','haran'];
+  const sched=loadSched().filter(s=>getBDS(new Date(s.start))===dateStr&&s.employee.toLowerCase()!==name&&!TIPS_EXCLUDED.includes(s.employee.toLowerCase()));
   let totalServiceMins=myServiceMins;
   sched.forEach(s=>{
     const sIn=toMinsFromMidnight(s.start),sOut=toMinsFromMidnight(s.end);
