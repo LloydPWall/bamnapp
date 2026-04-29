@@ -722,10 +722,7 @@ function splitRow(row){
 async function refreshSchedule(){
   document.getElementById('sched-period-label').textContent='Loading…';
   try{
-    const r=await fetch(SCHED_PROXY+'?key='+SECRET_KEY);
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const text=await r.text();
-    if(text.trim()==='Unauthorised')throw new Error('Unauthorised');
+    const text=await proxyFetch(SCHED_PROXY);
     const parsed=parseScheduleText(text);
     if(!parsed.length){document.getElementById('sched-period-label').textContent='No shifts found in data';return;}
     saveSched(parsed);renderSchedule();updateHomeUI();
@@ -953,10 +950,7 @@ function saveResv(d){localStorage.setItem(RESV_KEY,JSON.stringify(d))}
 async function refreshReservations(){
   document.getElementById('resv-status-label').textContent='Loading…';
   try{
-    const r=await fetch(RESV_PROXY+'?key='+SECRET_KEY);
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const text=await r.text();
-    if(text.trim()==='Unauthorised')throw new Error('Unauthorised');
+    const text=await proxyFetch(RESV_PROXY);
     const parsed=parseResvCSV(text);
     saveResv(parsed);
     renderReservationsScreen();
@@ -992,7 +986,7 @@ function renderReservationsScreen(){
   const all=loadResv(),label=document.getElementById('resv-status-label');
   if(!all.length){
     label.textContent='No bookings loaded — tap ↻ Refresh';
-    document.getElementById('resv-cal').innerHTML=`<div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>${url?'Tap refresh to load bookings':'Set a URL to get started'}</p></div>`;
+    document.getElementById('resv-cal').innerHTML=`<div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>Tap ↻ Refresh to load bookings</p></div>`;
     return;
   }
   const dates=all.map(r=>r.date).sort();
@@ -1062,10 +1056,7 @@ function openResvDayModal(ds){
 function loadTips(){try{return JSON.parse(localStorage.getItem(TIPS_KEY)||'[]')}catch{return[]}}
 async function refreshTips(){
   try{
-    const r=await fetch(TIPS_PROXY+'?key='+SECRET_KEY);
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const text=await r.text();
-    if(text.trim()==='Unauthorised')throw new Error('Unauthorised');
+    const text=await proxyFetch(TIPS_PROXY);
     const parsed=parseTipsCSV(text);
     localStorage.setItem(TIPS_KEY,JSON.stringify(parsed));
     renderTipsScreen();
@@ -1077,3 +1068,123 @@ async function refreshTips(){
 function parseTipsCSV(text){
   // Columns: Date;H;T;U;D  (Hundreds, Tens, Units, Decimal)
   const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const header=splitRow(lines[0]).map(c=>c.trim().toLowerCase());
+  const iDate=header.findIndex(h=>h==='date');
+  const iH=header.findIndex(h=>h==='h');
+  const iT=header.findIndex(h=>h==='t');
+  const iU=header.findIndex(h=>h==='u');
+  const iD=header.findIndex(h=>h==='d');
+  if(iDate===-1){showToast('Tips CSV format not recognised');return[];}
+  return lines.slice(1).map(row=>{
+    const c=splitRow(row);
+    const dateStr=c[iDate]||'';
+    let dp='';
+    if(dateStr.includes('/')){const p=dateStr.split('/');if(p.length===3){const[d,m,y]=p;dp=`${y.length===2?'20'+y:y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;}}
+    else if(dateStr.match(/^\d{4}-\d{2}-\d{2}$/))dp=dateStr;
+    if(!dp)return null;
+    // Reconstruct value: H*100 + T*10 + U + D/100
+    const h=parseFloat(c[iH]||0)||0;
+    const t=parseFloat(c[iT]||0)||0;
+    const u=parseFloat(c[iU]||0)||0;
+    const d=parseFloat(c[iD]||0)||0;
+    const total=h*100+t*10+u+d/100;
+    return{date:dp,total};
+  }).filter(Boolean);
+}
+
+// Service hours by weekday (0=Sun,1=Mon…6=Sat) — returns {start,end} in minutes from midnight
+function serviceMins(dateStr){
+  const dow=new Date(dateStr+'T12:00:00').getDay();
+  if(dow===0) return{start:12*60,end:18*60};            // Sun 12:00–18:00
+  if(dow>=1&&dow<=4) return{start:18*60,end:24*60-1};   // Mon–Thu 18:00–23:59
+  return{start:12*60,end:24*60-1};                       // Fri–Sat 12:00–23:59
+}
+
+// Overlap in minutes between [aStart,aEnd] and [bStart,bEnd]
+function overlapMins(aS,aE,bS,bE){return Math.max(0,Math.min(aE,bE)-Math.max(aS,bS));}
+
+function toMinsFromMidnight(isoStr){
+  const d=new Date(isoStr);
+  const berlinStr=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hour12:false}).format(d);
+  const[h,m]=berlinStr.split(':').map(Number);
+  return h*60+m;
+}
+
+function estimateTip(dateStr, totalTips){
+  // Get service window for this day
+  const svc=serviceMins(dateStr);
+  // Get user's own shift(s) on this date
+  const myShifts=loadShifts().filter(s=>{
+    const t=s.correctedIn||s.clockedIn||s.manualIn;
+    return t&&getBDS(new Date(t))===dateStr;
+  });
+  if(!myShifts.length)return null;
+
+  // My service minutes
+  let myServiceMins=0;
+  myShifts.forEach(s=>{
+    const inTs=s.correctedIn||s.clockedIn||s.manualIn;
+    const outTs=s.correctedOut||s.clockedOut||s.manualOut;
+    if(!inTs||!outTs)return;
+    const sIn=toMinsFromMidnight(inTs),sOut=toMinsFromMidnight(outTs);
+    myServiceMins+=overlapMins(sIn,sOut,svc.start,svc.end);
+  });
+  if(myServiceMins<=0)return null;
+
+  // Colleagues from schedule for this day (excluding me)
+  const name=getName().toLowerCase();
+  const sched=loadSched().filter(s=>getBDS(new Date(s.start))===dateStr&&s.employee.toLowerCase()!==name);
+  let totalServiceMins=myServiceMins;
+  sched.forEach(s=>{
+    const sIn=toMinsFromMidnight(s.start),sOut=toMinsFromMidnight(s.end);
+    totalServiceMins+=overlapMins(sIn,sOut,svc.start,svc.end);
+  });
+  if(totalServiceMins<=0)return null;
+  const share=(myServiceMins/totalServiceMins)*totalTips;
+  return{share,myServiceMins,totalServiceMins,myShifts:myShifts.length};
+}
+
+function renderTipsScreen(){
+  const tips=loadTips();
+  const list=document.getElementById('tips-list');
+  if(!tips.length){
+    list.innerHTML=`<div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><p>Tap ↻ Refresh to load tip data</p></div>`;
+    return;
+  }
+  // Sort descending by date
+  const sorted=[...tips].sort((a,b)=>b.date.localeCompare(a.date));
+  list.innerHTML=sorted.map(t=>{
+    const est=estimateTip(t.date,t.total);
+    const dateLabel=fmtDayShort(new Date(t.date+'T12:00:00'));
+    const totalFmt=t.total.toFixed(2);
+    let estHtml='';
+    if(est){
+      estHtml=`<div class="tip-estimate">Est. your share: €${est.share.toFixed(2)}</div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:2px">${est.myServiceMins} of ${est.totalServiceMins} service mins</div>`;
+    } else {
+      estHtml=`<div style="font-size:12px;color:var(--ink3);margin-top:3px">No shift data for this day — add your shift to estimate</div>`;
+    }
+    return`<div class="shift-item">
+      <div class="shift-date">${dateLabel}</div>
+      <div class="shift-hours">€${totalFmt} total tips</div>
+      ${estHtml}
+    </div>`;
+  }).join('');
+}
+
+// Also show tip estimate inline on shift cards
+function getTipEstimateForShift(s){
+  const t=s.correctedIn||s.clockedIn||s.manualIn;
+  if(!t)return'';
+  const ds=getBDS(new Date(t));
+  const tips=loadTips();
+  const tipDay=tips.find(x=>x.date===ds);
+  if(!tipDay)return'';
+  const est=estimateTip(ds,tipDay.total);
+  if(!est)return'';
+  return`<div class="tip-estimate">Est. tip: €${est.share.toFixed(2)}</div>`;
+}
+</script>
+</body>
+</html>
