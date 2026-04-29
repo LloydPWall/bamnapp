@@ -328,7 +328,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
         <p style="font-size:13px;color:var(--ink3);line-height:1.6">Export your shifts regularly as a backup. If you ever lose your data, upload your backup CSV here to restore it.</p>
       </div>
       <button class="btn-secondary" style="margin-top:0" onclick="document.getElementById('restore-file-input').click()">↑ Restore from backup CSV</button>
-      <input type="file" id="restore-file-input" accept=".csv" style="display:none" onchange="handleRestoreUpload(event)"/>
+      <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
       <div class="version-tag">BamnApp v1.6.0</div>
