@@ -337,7 +337,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v1.8.0</div>
+      <div class="version-tag">BamnApp v1.8.1</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -1272,6 +1272,18 @@ function serviceMins(dateStr){
 // Overlap in minutes between [aStart,aEnd] and [bStart,bEnd]
 function overlapMins(aS,aE,bS,bE){return Math.max(0,Math.min(aE,bE)-Math.max(aS,bS));}
 
+// Returns minutes from midnight, clamped to 1440 max for midnight-crossing shifts
+// refMins is the start time in mins — if end < start, the shift crosses midnight so end += 1440
+function shiftMinsClipped(startISO, endISO){
+  const d=new Date(startISO),e=new Date(endISO);
+  const fmt=t=>new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hour12:false}).format(t);
+  const [sh,sm]=fmt(d).split(':').map(Number);
+  const [eh,em]=fmt(e).split(':').map(Number);
+  let sMin=sh*60+sm, eMin=eh*60+em;
+  if(eMin<=sMin) eMin+=1440; // crosses midnight — extend past 1440
+  return{sMin,eMin};
+}
+
 function toMinsFromMidnight(isoStr){
   const d=new Date(isoStr);
   const berlinStr=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hour12:false}).format(d);
@@ -1295,8 +1307,8 @@ function estimateTip(dateStr, totalTips){
     const inTs=s.correctedIn||s.clockedIn||s.manualIn;
     const outTs=s.correctedOut||s.clockedOut||s.manualOut;
     if(!inTs||!outTs)return;
-    const sIn=toMinsFromMidnight(inTs),sOut=toMinsFromMidnight(outTs);
-    myServiceMins+=overlapMins(sIn,sOut,svc.start,svc.end);
+    const {sMin,eMin}=shiftMinsClipped(inTs,outTs);
+    myServiceMins+=overlapMins(sMin,eMin,svc.start,svc.end);
   });
   if(myServiceMins<=0)return null;
 
@@ -1306,8 +1318,8 @@ function estimateTip(dateStr, totalTips){
   const sched=loadSched().filter(s=>getBDS(new Date(s.start))===dateStr&&s.employee.toLowerCase()!==name&&!TIPS_EXCLUDED.includes(s.employee.toLowerCase()));
   let totalServiceMins=myServiceMins;
   sched.forEach(s=>{
-    const sIn=toMinsFromMidnight(s.start),sOut=toMinsFromMidnight(s.end);
-    totalServiceMins+=overlapMins(sIn,sOut,svc.start,svc.end);
+    const {sMin,eMin}=shiftMinsClipped(s.start,s.end);
+    totalServiceMins+=overlapMins(sMin,eMin,svc.start,svc.end);
   });
   if(totalServiceMins<=0)return null;
   const share=(myServiceMins/totalServiceMins)*totalTips;
