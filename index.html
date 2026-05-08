@@ -120,6 +120,15 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .view-toggle button.active{background:var(--ink);color:var(--yolk-light)}
 /* Day popup */
 #modal-day .sched-row{margin-bottom:8px}
+/* Profiles */
+.role-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 8px;border-radius:20px;color:#fff;margin-left:4px;vertical-align:middle}
+.profile-card-wrap{background:#fff;border:1px solid var(--paper3);border-radius:var(--radius);padding:18px;margin-bottom:12px;display:flex;align-items:center;gap:16px}
+.profile-name{font-family:var(--serif);font-size:22px;color:var(--ink)}
+.profile-sub{font-size:12px;color:var(--ink3);margin-top:3px}
+.team-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.team-tile{background:#fff;border:1px solid var(--paper3);border-radius:var(--radius-sm);padding:10px;display:flex;align-items:center;gap:10px}
+.team-tile-name{font-size:13px;font-weight:500;color:var(--ink)}
+.team-tile-role{font-size:11px;font-weight:600;margin-top:1px}
 /* Reservation rows */
 .resv-row{background:#fff;border:1px solid var(--paper3);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;}
 .resv-name{font-size:15px;font-weight:500;color:var(--ink)}
@@ -311,6 +320,10 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       </div>
       <button class="btn-primary" onclick="exportCSV()">Download CSV</button>
 
+      <div class="section-title" style="margin-top:0;border-top:none;padding-top:0">Your profile</div>
+      <div id="profile-card-wrap"></div>
+      <div class="section-title">Team</div>
+      <div id="team-grid-wrap"></div>
       <div class="section-title">About</div>
       <div class="info-block">
         <h3>What BamnApp is</h3>
@@ -351,7 +364,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v1.9.1</div>
+      <div class="version-tag">BamnApp v2.0.0</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -461,6 +474,34 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 <script>
 const TZ='Europe/Berlin';
 const STORAGE_KEY='bamnapp_shifts', OPEN_KEY='bamnapp_open', ONBOARD_KEY='bamnapp_onboarded', NAME_KEY='bamnapp_name', SCHED_KEY='bamnapp_schedule';
+const RC={Owner:'#8B6914',Manager:'#7C3AED',Kitchen:'#16A34A',Bar:'#2563EB',Service:'#D4A017',KP:'#EA580C'};
+const TEAM=[
+  {name:'Haran',display:'Häran',role:'Owner',pronouns:''},
+  {name:'Lloyd',display:'Lloyd',role:'Manager',pronouns:'',avatar:'data:image/webp;base64,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'},
+  {name:'Amber',display:'Amber',role:'Manager',pronouns:'they/them',avatar:'data:image/webp;base64,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'},
+  {name:'Seunghyun',display:'Seunghyun',role:'Kitchen',pronouns:''},
+  {name:'Rut',display:'Rut',role:'Kitchen',pronouns:''},
+  {name:'Ishmail',display:'Ishmail',role:'Kitchen',pronouns:''},
+  {name:'Hussain',display:'Hussain',role:'KP',pronouns:''},
+  {name:'Eliot',display:'Eliot',role:'Kitchen',pronouns:''},
+  {name:'Francisco',display:'Francisco',role:'Bar',pronouns:''},
+  {name:'Marshall',display:'Marshall',role:'Bar',pronouns:''},
+  {name:'Luuk',display:'Luuk',role:'Service',pronouns:''},
+  {name:'Ayden',display:'Ayden',role:'Service',pronouns:''},
+  {name:'Ali',display:'Ali',role:'Service',pronouns:''},
+  {name:'Enas',display:'Enas',role:'Service',pronouns:''},
+];
+function getProfile(n){if(!n)return null;const l=n.toLowerCase();return TEAM.find(p=>p.name.toLowerCase()===l||p.display.toLowerCase()===l)||null;}
+function rc(role){return RC[role]||'#6b6b6b';}
+function mkAvatar(name,size){
+  const p=getProfile(name);const color=p?rc(p.role):'#6b6b6b';const disp=p?p.display:name;
+  const sz=size||40;
+  if(p&&p.avatar){
+    return '<img src="'+p.avatar+'" width="'+sz+'" height="'+sz+'" style="border-radius:4px;object-fit:cover;flex-shrink:0" alt="'+disp+'">';
+  }
+  const ini=(disp||'?').slice(0,2).toUpperCase();
+  return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="border-radius:4px;flex-shrink:0"><rect width="40" height="40" fill="'+color+'"/><rect x="3" y="3" width="34" height="34" fill="white" opacity="0.08"/><text x="20" y="27" font-family="monospace" font-size="15" font-weight="bold" fill="white" text-anchor="middle">'+ini+'</text></svg>';
+}
 const RESV_KEY='bamnapp_resv', TIPS_KEY='bamnapp_tips', NOTICES_KEY='bamnapp_notices';
 const SECRET='1300';
 const NOTICES_PROXY='https://script.google.com/macros/s/AKfycbyVxgJlrECg36AgwBOUbDmI-57QUL2pL6UvvqYsMF0z8vyy0ttXABp3fgzGpOR7veM/exec';
@@ -520,11 +561,8 @@ function genId(){return Date.now().toString(36)+Math.random().toString(36).slice
 
 // ── PROXY FETCH ──
 async function proxyFetch(url){
-  const r=await fetch(url+'?key='+SECRET, {
-    redirect:'follow',
-    mode:'cors',
-    headers:{'Accept':'text/plain,text/csv,*/*'}
-  });
+  // Apps Script requires a simple fetch with no extra headers to avoid CORS preflight
+  const r=await fetch(url+'?key='+SECRET);
   if(!r.ok) throw new Error('HTTP '+r.status);
   const text=await r.text();
   if(text.trim()==='Unauthorised') throw new Error('Unauthorised');
@@ -582,7 +620,7 @@ function showScreen(name,btn){
   if(name==='schedule')renderSchedule();
   if(name==='reservations')renderReservationsScreen();
   if(name==='tips')renderTipsScreen();
-  if(name==='more'){const n=getName();document.getElementById('info-name-display').textContent=n?'Saved as: '+n:'No name saved.';renderNoticesMore();}
+  if(name==='more'){const n=getName();document.getElementById('info-name-display').textContent=n?'Saved as: '+n:'No name saved.';renderNoticesMore();renderProfiles();}
   if(name==='home')updateHomeUI();
 }
 function openModal(id){document.getElementById(id).classList.add('open')}
@@ -618,7 +656,7 @@ function updateHomeUI(){
   document.getElementById('stat-all').textContent=hrs(sumMs('all')+openMs);
   renderNextShift();renderProjectedHome();
   renderNoticesHome();
-  const flagged=shifts.filter(s=>s.flagged||s.autoClockOut);
+  const flagged=shifts.filter(s=>s.flagged);
   const fc=document.getElementById('flags-container');fc.innerHTML='';
   if(flagged.length)fc.innerHTML=`<div class="card warn"><div class="card-label">Needs attention</div><div style="font-size:14px;color:#8b3010;line-height:1.7">${flagged.length} shift${flagged.length>1?'s':''} flagged — auto-clocked out. Please review.</div><button class="btn-small" style="margin-top:10px;border-color:#e8b8a8;color:#8b3010" onclick="showScreen('shifts',document.getElementById('nav-shifts'))">Review →</button></div>`;
 }
@@ -714,7 +752,7 @@ function renderShifts(){
     if(s.manual)tags.push('<span class="tag manual">Manual record</span>');
     if(s.correctedIn||s.correctedOut)tags.push('<span class="tag info">Corrected</span>');
     return`<div class="shift-item ${s.flagged?'flagged':''} ${s.manual&&!s.flagged?'manual':''} ${(s.correctedIn||s.correctedOut)&&!s.flagged?'corrected':''}">
-      <div class="shift-date">${fmtD(eI)}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${mkAvatar(getName(),24)}<div class="shift-date" style="margin-bottom:0">${fmtD(eI)}</div></div>
       <div class="shift-times">${fmtT(eI)} → ${eO?fmtT(eO):'ongoing'}</div>
       <div class="shift-hours">${ms?hrs(ms)+' hrs':'—'}</div>
       ${getTipEstimateForShift(s)}
@@ -1112,6 +1150,26 @@ function renderNoticesMore(){
   list.innerHTML=notices.map((n,i)=>noticeCardHTML(n,i,true)).join('');
 }
 
+function renderProfiles(){
+  const name=getName();
+  const p=getProfile(name);
+  const pw=document.getElementById('profile-card-wrap');
+  const tg=document.getElementById('team-grid-wrap');
+  if(pw){
+    if(p){
+      pw.innerHTML='<div class="profile-card-wrap">'+mkAvatar(p.name,60)+'<div><div class="profile-name">'+p.display+'</div>'+(p.pronouns?'<div class="profile-sub">'+p.pronouns+'</div>':'')+'<div style="margin-top:6px"><span class="role-badge" style="background:'+rc(p.role);
+      pw.innerHTML+=';font-size:12px;padding:3px 12px">'+p.role+'</span></div></div></div>';
+    } else {
+      pw.innerHTML='<div style="font-size:13px;color:var(--ink3);padding:4px 0 8px">Set your name above to see your profile.</div>';
+    }
+  }
+  if(tg){
+    const order=['Owner','Manager','Bar','Service','Kitchen','KP'];
+    const sorted=[...TEAM].sort((a,b)=>order.indexOf(a.role)-order.indexOf(b.role));
+    tg.innerHTML='<div class="team-grid">'+sorted.map(m=>'<div class="team-tile">'+mkAvatar(m.name,32)+'<div><div class="team-tile-name">'+m.display+'</div><div class="team-tile-role" style="color:'+rc(m.role)+'">'+m.role+'</div></div></div>').join('')+'</div>';
+  }
+}
+
 document.addEventListener('DOMContentLoaded',init);
 
 // ── SWIPE NAVIGATION ──
@@ -1197,14 +1255,18 @@ function openDayModal(ds){
     html+='<div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Your shift</div>';
     myShifts.forEach(s=>{
       const ms=new Date(s.end)-new Date(s.start);
-      html+=`<div class="sched-row mine"><div><div class="sched-employee">${s.employee} ★</div><div class="sched-hours">${hrs(ms)} hrs</div></div><div class="sched-time">${fmtT(s.start)} – ${fmtT(s.end)}</div></div>`;
+      {const pp=getProfile(s.employee);const dd=pp?pp.display:s.employee;const cc=pp?rc(pp.role):'#6b6b6b';
+      html+='<div class="sched-row mine" style="gap:8px">'+mkAvatar(s.employee,34)+'<div style="flex:1"><div class="sched-employee">'+dd+' ★'+(pp?'<span class="role-badge" style="background:'+cc+'">'+pp.role+'</span>':'')+'</div><div class="sched-hours">'+hrs(ms)+' hrs'+(pp&&pp.pronouns?' <span style="font-size:11px;color:var(--ink3);font-weight:400">'+pp.pronouns+'</span>':'')+'</div></div><div class="sched-time">'+fmtT(s.start)+' – '+fmtT(s.end)+'</div></div>';
+      }
     });
   }
   if(othersShifts.length){
     html+=`<div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin:${myShifts.length?'14px':'0'}px 0 8px">Also working</div>`;
     othersShifts.forEach(s=>{
       const ms=new Date(s.end)-new Date(s.start);
-      html+=`<div class="sched-row"><div><div class="sched-employee">${s.employee}</div><div class="sched-hours">${hrs(ms)} hrs</div></div><div class="sched-time">${fmtT(s.start)} – ${fmtT(s.end)}</div></div>`;
+      {const pp=getProfile(s.employee);const dd=pp?pp.display:s.employee;const cc=pp?rc(pp.role):'#6b6b6b';
+      html+='<div class="sched-row" style="gap:8px">'+mkAvatar(s.employee,34)+'<div style="flex:1"><div class="sched-employee">'+dd+(pp?'<span class="role-badge" style="background:'+cc+'">'+pp.role+'</span>':'')+'</div><div class="sched-hours">'+hrs(ms)+' hrs</div></div><div class="sched-time">'+fmtT(s.start)+' – '+fmtT(s.end)+'</div></div>';
+      }
     });
   }
   if(!html)html='<p style="color:var(--ink3);font-size:14px">No shifts scheduled this day.</p>';
