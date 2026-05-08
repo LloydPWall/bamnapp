@@ -378,7 +378,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v2.1.1</div>
+      <div class="version-tag">BamnApp v2.1.2</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -517,7 +517,7 @@ function mkAvatar(name,size){
   const ini=(disp||'?').slice(0,2).toUpperCase();
   return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="border-radius:4px;flex-shrink:0"><rect width="40" height="40" fill="'+color+'"/><rect x="3" y="3" width="34" height="34" fill="white" opacity="0.08"/><text x="20" y="27" font-family="monospace" font-size="15" font-weight="bold" fill="white" text-anchor="middle">'+ini+'</text></svg>';
 }
-const RESV_KEY='bamnapp_resv', TIPS_KEY='bamnapp_tips', NOTICES_KEY='bamnapp_notices';
+const RESV_KEY='bamnapp_resv', TIPS_KEY='bamnapp_tips', NOTICES_KEY='bamnapp_notices', WEATHER_KEY='bamnapp_weather';
 const SECRET='1300';
 const NOTICES_PROXY='https://script.google.com/macros/s/AKfycbyVxgJlrECg36AgwBOUbDmI-57QUL2pL6UvvqYsMF0z8vyy0ttXABp3fgzGpOR7veM/exec';
 const SCHED_PROXY='https://script.google.com/macros/s/AKfycbyMvvtuvtrgFdWnaLc3wbgZtUvIovCLkvc24ie9bAWx1Y4lgc0a-6jUOK36r1nfMqocyA/exec';
