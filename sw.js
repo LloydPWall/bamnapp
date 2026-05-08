@@ -1,4 +1,4 @@
-const CACHE = 'bamnapp-v23';
+const CACHE = 'bamnapp-v24';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -7,15 +7,21 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+    .then(() => {
+      // Tell all open clients to reload so they get the new version immediately
+      return self.clients.matchAll({type:'window'}).then(clients => {
+        clients.forEach(client => client.postMessage({type:'SW_UPDATED'}));
+      });
+    })
+  );
 });
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // Network-first for HTML — always fetches latest, falls back to cache offline
   if (url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
     e.respondWith(
       fetch(e.request)
@@ -27,7 +33,6 @@ self.addEventListener('fetch', e => {
         .catch(() => caches.match(e.request))
     );
   } else {
-    // Cache-first for everything else (fonts, manifest etc)
     e.respondWith(
       caches.match(e.request).then(cached => cached || fetch(e.request))
     );
