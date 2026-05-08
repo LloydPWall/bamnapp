@@ -1038,8 +1038,11 @@ async function refreshNotices(){
     saveNotices(parsed);
     renderNoticesHome();
     renderNoticesMore();
+    return true;
   }catch(e){
-    showToast('Failed to fetch announcements');
+    showToast('Announcements: '+e.message);
+    console.error('Notices fetch error:',e);
+    return false;
   }
 }
 function parseNoticesCSV(text){
