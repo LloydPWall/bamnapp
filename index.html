@@ -246,22 +246,21 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       </div>
       <div id="live-time"></div>
       <div id="current-shift-info"></div>
-      <div class="stats-grid">
-        <div class="stat-tile"><div class="lbl">Today</div><div class="val" id="stat-today">0.00</div><div class="unit">hrs</div></div>
-        <div class="stat-tile"><div class="lbl">This week</div><div class="val" id="stat-week">0.00</div><div class="unit">hrs</div></div>
-        <div class="stat-tile"><div class="lbl">This month</div><div class="val" id="stat-month">0.00</div><div class="unit">hrs</div></div>
-        <div class="stat-tile"><div class="lbl">All time</div><div class="val" id="stat-all">0.00</div><div class="unit">hrs</div></div>
-      </div>
+      <div id="notices-home-card"></div>
       <div id="next-shift-card"></div>
       <div id="projected-home-card"></div>
       <div id="flags-container"></div>
-      <div id="home-weather-card"></div>
-      <div id="notices-home-card"></div>
     </div>
 
     <!-- SHIFTS -->
     <div id="screen-shifts" class="screen">
       <div class="page-header"><h1>Shifts</h1></div>
+      <div class="stats-grid" style="margin-bottom:14px">
+        <div class="stat-tile"><div class="lbl">Today</div><div class="val" id="stat-today">0.00</div><div class="unit">hrs</div></div>
+        <div class="stat-tile"><div class="lbl">This week</div><div class="val" id="stat-week">0.00</div><div class="unit">hrs</div></div>
+        <div class="stat-tile"><div class="lbl">This month</div><div class="val" id="stat-month">0.00</div><div class="unit">hrs</div></div>
+        <div class="stat-tile"><div class="lbl">All time</div><div class="val" id="stat-all">0.00</div><div class="unit">hrs</div></div>
+      </div>
       <div class="shifts-filter" id="shift-filter-row">
         <button class="filter-btn active" onclick="setFilter(this,'all')">All</button>
         <button class="filter-btn" onclick="setFilter(this,'today')">Today</button>
@@ -378,7 +377,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v2.1.2</div>
+      <div class="version-tag">BamnApp v2.2.0</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -646,14 +645,21 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 // ── HOME UI ──
 function updateHomeUI(){
   const now=new Date();
-  document.getElementById('home-date').textContent=fmtDayLong(now);
   const uname=getName();
   const greetEl=document.getElementById('home-greeting');
   const avatarEl=document.getElementById('home-avatar');
   if(greetEl){
     const hour=parseInt(new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',hour12:false}).format(now));
     const tod=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+    // Today's weather inline
+    const wc=loadWeather();
+    const todayW=wc&&wc.days?wc.days[getBDS(now)]:null;
+    const wInline=todayW?'<span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-size:13px;color:var(--ink3);font-family:var(--sans);font-weight:400;vertical-align:middle">'+wmoIcon(todayW.code,16).icon+' '+todayW.max+'°C</span>':'';
+    const dateStr=fmtDayLong(now);
+    document.getElementById('home-date').innerHTML=dateStr+wInline;
     greetEl.innerHTML=uname?tod+', <span style="color:var(--yolk)">'+uname+'</span>!':'BamnApp';
+  } else {
+    document.getElementById('home-date').textContent=fmtDayLong(now);
   }
   if(avatarEl&&uname) avatarEl.innerHTML=mkAvatar(uname,40);
   const open=getOpen();
@@ -678,7 +684,7 @@ function updateHomeUI(){
   document.getElementById('stat-week').textContent=hrs(sumMs('week')+openMs);
   document.getElementById('stat-month').textContent=hrs(sumMs('month')+openMs);
   document.getElementById('stat-all').textContent=hrs(sumMs('all')+openMs);
-  renderNextShift();renderProjectedHome();renderHomeWeather();
+  renderNextShift();renderProjectedHome();
   renderNoticesHome();
   const flagged=shifts.filter(s=>s.flagged);
   const fc=document.getElementById('flags-container');fc.innerHTML='';
@@ -703,10 +709,18 @@ function renderNextShift(){
   if(!upcoming.length){card.innerHTML='';return;}
   const n=upcoming[0],ms=new Date(n.end)-new Date(n.start);
   const ds=getBDS(new Date(n.start));
+  const w=loadWeather();
+  const wday=w&&w.days?w.days[ds]:null;
+  const wbit=wday?'<div style="display:flex;flex-direction:column;align-items:center;gap:2px">'+wmoIcon(wday.code,28).icon+'<span style="font-size:12px;font-weight:500;color:var(--yolk-dim)">'+wday.max+'°</span></div>':'';
   card.innerHTML=`<div class="card accent" style="cursor:pointer;user-select:none" onclick="openDayModal('${ds}')">
-    <div class="card-label">Next shift &nbsp;<span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:11px">tap for details</span></div>
-    <div style="font-size:17px;font-weight:500;color:var(--ink);margin-bottom:2px">${smartDayLabel(n.start)}</div>
-    <div style="font-size:15px;color:var(--ink3)">${fmtT(n.start)} – ${fmtT(n.end)} &nbsp;·&nbsp; ${hrs(ms)} hrs</div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+      <div style="flex:1">
+        <div class="card-label">Next shift &nbsp;<span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:11px">tap for details</span></div>
+        <div style="font-size:17px;font-weight:500;color:var(--ink);margin-bottom:2px">${smartDayLabel(n.start)}</div>
+        <div style="font-size:15px;color:var(--ink3)">${fmtT(n.start)} – ${fmtT(n.end)} &nbsp;·&nbsp; ${hrs(ms)} hrs</div>
+      </div>
+      ${wbit}
+    </div>
   </div>`;
 }
 
@@ -741,7 +755,7 @@ function renderProjectedHome(){
   });
   const pct=scheduledMs>0?Math.min(100,Math.round(workedMs/scheduledMs*100)):0;
   const {start,end}=wb;
-  card.innerHTML=`<div class="card"><div class="card-label">This week · ${fmtD(start)} – ${fmtD(end-86400000)}</div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px"><span style="font-family:var(--serif);font-size:28px">${hrs(workedMs)}</span><span style="font-size:13px;color:var(--ink3)">of ${hrs(scheduledMs)} hrs scheduled</span></div><div class="proj-bar-wrap"><div class="proj-bar" style="width:${pct}%"></div></div><div style="font-size:12px;color:var(--ink3);margin-top:4px">${pct}% complete · ${mine.length} shift${mine.length!==1?'s':''} this week</div></div>`;
+  card.innerHTML=`<div class="card" style="cursor:pointer;user-select:none" onclick="showScreen('shifts',document.getElementById('nav-shifts'))"><div class="card-label">This week · ${fmtD(start)} – ${fmtD(end-86400000)} &nbsp;<span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:11px">tap to view shifts</span></div><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px"><span style="font-family:var(--serif);font-size:28px">${hrs(workedMs)}</span><span style="font-size:13px;color:var(--ink3)">of ${hrs(scheduledMs)} hrs scheduled</span></div><div class="proj-bar-wrap"><div class="proj-bar" style="width:${pct}%"></div></div><div style="font-size:12px;color:var(--ink3);margin-top:4px">${pct}% complete · ${mine.length} shift${mine.length!==1?'s':''} this week</div></div>`;
 }
 
 let durInt;
@@ -1260,20 +1274,7 @@ async function fetchWeather(){
   }
 }
 
-function renderHomeWeather(){
-  const card=document.getElementById('home-weather-card');
-  if(!card)return;
-  const w=loadWeather();
-  if(!w){
-    card.innerHTML='<div style="font-size:12px;color:var(--ink3);padding:4px 0 8px">Fetching weather…</div>';
-    return;
-  }
-  const todayStr=getBDS(new Date());
-  const today=w.days?w.days[todayStr]:null;
-  if(!today){card.innerHTML='';return;}
-  const wmo=wmoIcon(today.code,40);
-  card.innerHTML='<div class="home-weather"><div class="home-weather-icon">'+wmo.icon+'</div><div class="home-weather-info"><div class="home-weather-temp">'+today.max+'°C</div><div class="home-weather-desc">'+wmo.label+' · Berlin Kreuzberg</div></div></div>';
-}
+function renderHomeWeather(){updateHomeUI();}
 
 document.addEventListener('DOMContentLoaded',init);
 
