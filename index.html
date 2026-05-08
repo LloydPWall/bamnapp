@@ -364,7 +364,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v2.0.0</div>
+      <div class="version-tag">BamnApp v2.0.1</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -483,6 +483,7 @@ const TEAM=[
   {name:'Rut',display:'Rut',role:'Kitchen',pronouns:''},
   {name:'Ishmail',display:'Ishmail',role:'Kitchen',pronouns:''},
   {name:'Hussain',display:'Hussain',role:'KP',pronouns:''},
+  {name:'Bari',display:'Bari',role:'KP',pronouns:''},
   {name:'Eliot',display:'Eliot',role:'Kitchen',pronouns:''},
   {name:'Francisco',display:'Francisco',role:'Bar',pronouns:''},
   {name:'Marshall',display:'Marshall',role:'Bar',pronouns:''},
@@ -958,7 +959,12 @@ function init(){
   document.getElementById('export-to').value=fmt(now);
 
   document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    navigator.serviceWorker.addEventListener('message', e=>{
+      if(e.data&&e.data.type==='SW_UPDATED') window.location.reload();
+    });
+  }
   refreshNotices();
   setInterval(updateHomeUI,60000);
 }
