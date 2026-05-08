@@ -1241,20 +1241,22 @@ function saveWeather(d){localStorage.setItem(WEATHER_KEY,JSON.stringify(d))}
 
 async function fetchWeather(){
   try{
-    const url='https://api.open-meteo.com/v1/forecast?latitude=52.499&longitude=13.404&daily=weathercode,temperature_2m_max&timezone=Europe%2FBerlin&forecast_days=14';
+    const url='https://api.open-meteo.com/v1/forecast?latitude=52.499&longitude=13.404&daily=weather_code,temperature_2m_max&timezone=Europe%2FBerlin&forecast_days=14';
     const r=await fetch(url);
     if(!r.ok)throw new Error('HTTP '+r.status);
     const data=await r.json();
     const days={};
+    const codes=data.daily.weather_code||data.daily.weathercode||[];
     data.daily.time.forEach((date,i)=>{
-      days[date]={code:data.daily.weathercode[i],max:Math.round(data.daily.temperature_2m_max[i])};
+      days[date]={code:codes[i]||0,max:Math.round(data.daily.temperature_2m_max[i])};
     });
     saveWeather({days,fetched:Date.now()});
     renderHomeWeather();
-    // Re-render calendar if visible
-    if(document.getElementById('screen-schedule').classList.contains('active')) renderCalendar();
+    if(document.getElementById('screen-schedule')&&document.getElementById('screen-schedule').classList.contains('active')) renderCalendar();
   }catch(e){
     console.warn('Weather fetch failed:',e.message);
+    // Show cached data if available
+    renderHomeWeather();
   }
 }
 
@@ -1262,12 +1264,16 @@ function renderHomeWeather(){
   const card=document.getElementById('home-weather-card');
   if(!card)return;
   const w=loadWeather();
-  if(!w)return;
+  if(!w){
+    // No cached data yet — fetch will call us again when done
+    card.innerHTML='';
+    return;
+  }
   const todayStr=getBDS(new Date());
-  const today=w.days[todayStr];
+  const today=w.days?w.days[todayStr]:null;
   if(!today){card.innerHTML='';return;}
-  const{icon,label}=wmoIcon(today.code,40);
-  card.innerHTML='<div class="home-weather"><div class="home-weather-icon">'+icon+'</div><div class="home-weather-info"><div class="home-weather-temp">'+today.max+'°C</div><div class="home-weather-desc">'+label+' · Berlin Kreuzberg</div></div></div>';
+  const wmo=wmoIcon(today.code,40);
+  card.innerHTML='<div class="home-weather"><div class="home-weather-icon">'+wmo.icon+'</div><div class="home-weather-info"><div class="home-weather-temp">'+today.max+'°C</div><div class="home-weather-desc">'+wmo.label+' · Berlin Kreuzberg</div></div></div>';
 }
 
 document.addEventListener('DOMContentLoaded',init);
