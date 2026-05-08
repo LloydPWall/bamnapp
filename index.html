@@ -520,7 +520,11 @@ function genId(){return Date.now().toString(36)+Math.random().toString(36).slice
 
 // ── PROXY FETCH ──
 async function proxyFetch(url){
-  const r=await fetch(url+'?key='+SECRET);
+  const r=await fetch(url+'?key='+SECRET, {
+    redirect:'follow',
+    mode:'cors',
+    headers:{'Accept':'text/plain,text/csv,*/*'}
+  });
   if(!r.ok) throw new Error('HTTP '+r.status);
   const text=await r.text();
   if(text.trim()==='Unauthorised') throw new Error('Unauthorised');
