@@ -129,6 +129,16 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .home-weather-info{}
 .home-weather-temp{font-family:var(--serif);font-size:28px;color:var(--ink);line-height:1}
 .home-weather-desc{font-size:13px;color:var(--ink3);margin-top:2px}
+/* Menu alerts */
+.menu-alert-card{background:#fff7ed;border:1px solid #f59e0b;border-left:4px solid #d97706;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;cursor:pointer;}
+.menu-alert-card:active{background:#fef3c7}
+.menu-alert-card.today{background:#fef3c7;border-color:#d97706;}
+.menu-alert-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.menu-alert-item{font-size:14px;font-weight:600;color:#92400e}
+.menu-alert-cat{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:#d97706;color:#fff}
+.menu-alert-cat.today{background:#b45309}
+.menu-alert-notes{font-size:13px;color:#a16207;margin-top:4px}
+.menu-alert-date{font-size:11px;color:#b45309;margin-top:3px}
 /* Profiles */
 .role-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 8px;border-radius:20px;color:#fff;margin-left:4px;vertical-align:middle}
 .profile-card-wrap{background:#fff;border:1px solid var(--paper3);border-radius:var(--radius);padding:18px;margin-bottom:12px;display:flex;align-items:center;gap:16px}
@@ -246,6 +256,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       </div>
       <div id="live-time"></div>
       <div id="current-shift-info"></div>
+      <div id="menu-alerts-home-card"></div>
       <div id="notices-home-card"></div>
       <div id="next-shift-card"></div>
       <div id="projected-home-card"></div>
@@ -377,7 +388,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v2.2.0</div>
+      <div class="version-tag">BamnApp v2.3.0</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -465,13 +476,31 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-menu-alerts">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-title">Menu Alerts</div>
+    <div id="modal-menu-alerts-content"></div>
+    <button class="btn-secondary" onclick="closeModal('modal-menu-alerts')" style="margin-top:8px">Close</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-notices-list">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-title">Announcements</div>
+    <div id="modal-notices-list-content"></div>
+    <button class="btn-secondary" onclick="closeModal('modal-notices-list')" style="margin-top:8px">Close</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-notice">
   <div class="modal">
     <span class="modal-handle"></span>
     <div class="modal-title" id="modal-notice-title"></div>
     <div style="font-size:12px;color:var(--ink3);margin-bottom:16px" id="modal-notice-meta"></div>
     <div style="font-size:15px;color:var(--ink);line-height:1.7;white-space:pre-wrap" id="modal-notice-body"></div>
-    <button class="btn-secondary" onclick="closeModal('modal-notice')" style="margin-top:16px">Close</button>
+    <button class="btn-secondary" onclick="closeNoticeModal()" style="margin-top:16px">Got it</button>
   </div>
 </div>
 
@@ -516,8 +545,9 @@ function mkAvatar(name,size){
   const ini=(disp||'?').slice(0,2).toUpperCase();
   return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="border-radius:4px;flex-shrink:0"><rect width="40" height="40" fill="'+color+'"/><rect x="3" y="3" width="34" height="34" fill="white" opacity="0.08"/><text x="20" y="27" font-family="monospace" font-size="15" font-weight="bold" fill="white" text-anchor="middle">'+ini+'</text></svg>';
 }
-const RESV_KEY='bamnapp_resv', TIPS_KEY='bamnapp_tips', NOTICES_KEY='bamnapp_notices', WEATHER_KEY='bamnapp_weather';
+const RESV_KEY='bamnapp_resv', TIPS_KEY='bamnapp_tips', NOTICES_KEY='bamnapp_notices', WEATHER_KEY='bamnapp_weather', READS_KEY='bamnapp_notice_reads', MENU_KEY='bamnapp_menu_alerts';
 const SECRET='1300';
+const MENU_PROXY='https://script.google.com/macros/s/AKfycbxHZ6UrJ7067HHTq8YPTsznUnlqxedM5Yu0-nrC2ybkTfztr6d6P01mUrBV75Hk7ACI/exec';
 const NOTICES_PROXY='https://script.google.com/macros/s/AKfycbyVxgJlrECg36AgwBOUbDmI-57QUL2pL6UvvqYsMF0z8vyy0ttXABp3fgzGpOR7veM/exec';
 const SCHED_PROXY='https://script.google.com/macros/s/AKfycbyMvvtuvtrgFdWnaLc3wbgZtUvIovCLkvc24ie9bAWx1Y4lgc0a-6jUOK36r1nfMqocyA/exec';
 const RESV_PROXY='https://script.google.com/macros/s/AKfycbw_yIxztN2eUTNDnCZKHqHME2Hwcdp9FzTxYEjY5pTxoPw7Lyy4OTg6OrgYjmqbl8MS/exec';
@@ -685,6 +715,7 @@ function updateHomeUI(){
   document.getElementById('stat-month').textContent=hrs(sumMs('month')+openMs);
   document.getElementById('stat-all').textContent=hrs(sumMs('all')+openMs);
   renderNextShift();renderProjectedHome();
+  renderMenuAlertsHome();
   renderNoticesHome();
   const flagged=shifts.filter(s=>s.flagged);
   const fc=document.getElementById('flags-container');fc.innerHTML='';
@@ -1004,6 +1035,7 @@ function init(){
   }
   refreshNotices();
   fetchWeather();
+  fetchMenuAlerts();
   setInterval(updateHomeUI,60000);
 }
 // ── CSV RESTORE ──
@@ -1108,7 +1140,8 @@ async function globalRefresh(){
     refreshReservations(),
     refreshTips(),
     refreshNotices(),
-    fetchWeather()
+    fetchWeather(),
+    fetchMenuAlerts()
   ]);
   btn.style.opacity='';btn.style.pointerEvents='';
   updateHomeUI();
@@ -1123,7 +1156,8 @@ async function refreshNotices(){
     const text=await proxyFetch(NOTICES_PROXY);
     const parsed=parseNoticesCSV(text);
     saveNotices(parsed);
-    renderNoticesHome();
+    renderMenuAlertsHome();
+  renderNoticesHome();
     renderNoticesMore();
     return true;
   }catch(e){
@@ -1157,42 +1191,99 @@ function parseNoticesCSV(text){
     return b.date.localeCompare(a.date);
   });
 }
+function loadReads(){try{return new Set(JSON.parse(localStorage.getItem(READS_KEY)||'[]'))}catch{return new Set()}}
+function saveReads(s){localStorage.setItem(READS_KEY,JSON.stringify([...s]))}
+function noticeKey(n){return(n.title||'')+'|'+(n.date||'');}
+function isRead(n){return loadReads().has(noticeKey(n));}
+function markRead(n){const r=loadReads();r.add(noticeKey(n));saveReads(r);}
+function unreadCount(){const notices=loadNotices();const r=loadReads();return notices.filter(n=>!r.has(noticeKey(n))).length;}
+
 function openNoticeModal(idx){
   const notices=loadNotices();
   const n=notices[idx];if(!n)return;
   document.getElementById('modal-notice-title').textContent=n.title;
   document.getElementById('modal-notice-meta').textContent=(n.pinned?'📌 Pinned · ':'')+(n.date||'');
   document.getElementById('modal-notice-body').textContent=n.body;
+  // Store which notice is being read — mark read on close
+  document.getElementById('modal-notice').dataset.readIdx=idx;
   openModal('modal-notice');
+}
+function closeNoticeModal(){
+  const el=document.getElementById('modal-notice');
+  const idx=parseInt(el.dataset.readIdx||'-1');
+  if(idx>=0){
+    const notices=loadNotices();
+    if(notices[idx])markRead(notices[idx]);
+  }
+  el.dataset.readIdx='';
+  closeModal('modal-notice');
+  // Re-render wherever notices are shown
+  renderMenuAlertsHome();
+  renderNoticesHome();
+  renderNoticesMore();
+  // Refresh list modal if open
+  const listModal=document.getElementById('modal-notices-list');
+  if(listModal&&listModal.classList.contains('open')){
+    document.getElementById('modal-notices-list-content').innerHTML=
+      loadNotices().map((n,i)=>noticeCardHTML(n,i,true)).join('');
+  }
 }
 function noticeCardHTML(n,idx,preview){
   const pinClass=n.pinned?' pinned':'';
   const pin=n.pinned?'<span style="font-size:10px;margin-right:4px">📌</span>':'';
-  return`<div class="notice-card${pinClass}" onclick="openNoticeModal(${idx})">
-    <div class="notice-title">${pin}${n.title}</div>
-    <div class="notice-meta">${n.date||''}</div>
-    ${preview&&n.body?`<div class="notice-preview">${n.body}</div>`:''}
-  </div>`;
+  const unread=!isRead(n);
+  const dot=unread?'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--yolk);margin-left:6px;vertical-align:middle;flex-shrink:0"></span>':'';
+  const titleWeight=unread?'font-weight:700':'font-weight:500';
+  return'<div class="notice-card'+pinClass+'" onclick="openNoticeModal('+idx+')">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between">'+
+      '<div class="notice-title" style="'+titleWeight+'">'+pin+n.title+'</div>'+
+      dot+
+    '</div>'+
+    '<div class="notice-meta">'+(n.date||'')+'</div>'+
+    (preview&&n.body?'<div class="notice-preview">'+n.body+'</div>':'')+
+  '</div>';
 }
 function renderNoticesHome(){
   const card=document.getElementById('notices-home-card');
   if(!card)return;
   const notices=loadNotices();
   if(!notices.length){card.innerHTML='';return;}
-  // Show only pinned + most recent 2 on home
-  const pinned=notices.filter(n=>n.pinned);
-  const unpinned=notices.filter(n=>!n.pinned).slice(0,Math.max(0,2-pinned.length));
-  const toShow=[...pinned,...unpinned];
-  card.innerHTML=`<div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin:4px 0 8px">Announcements</div>`
-    +toShow.map((n,i)=>noticeCardHTML(n,notices.indexOf(n),true)).join('')
-    +(notices.length>toShow.length?`<div style="font-size:12px;color:var(--ink3);text-align:center;padding:4px 0 8px;cursor:pointer" onclick="showScreen('more',document.getElementById('nav-more'))">+ ${notices.length-toShow.length} more — see all in More</div>`:'');
+  // Show only the top notice (pinned first, else most recent)
+  const top=notices[0];
+  const idx=0;
+  const pin=top.pinned?'<span style="font-size:10px;margin-right:4px">📌</span>':'';
+  const pinClass=top.pinned?' pinned':'';
+  const moreCount=notices.length-1;
+  card.innerHTML=
+    '<div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin:4px 0 8px">Announcements</div>'+
+    '<div class="notice-card'+pinClass+'" onclick="openNoticeModal('+idx+')">'+
+      '<div class="notice-title">'+pin+top.title+'</div>'+
+      '<div class="notice-meta">'+( top.date||'')+'</div>'+
+      (top.body?'<div class="notice-preview">'+top.body+'</div>':'')+
+    '</div>'+
+    '<div style="display:flex;justify-content:flex-end;margin-top:4px;margin-bottom:4px">'+
+      '<button onclick="openNoticesListModal()" style="background:none;border:none;font-size:12px;color:var(--ink3);cursor:pointer;font-family:var(--sans);padding:4px 0;">'+
+        (()=>{const u=unreadCount();const more=notices.length-1;if(u>0)return u+' unread announcement'+(u>1?'s':'')+' →';if(more>0)return'+ '+more+' more →';return'All announcements →';})()
+      +'</button>'+
+    '</div>';
 }
 function renderNoticesMore(){
   const list=document.getElementById('notices-more-list');
   if(!list)return;
   const notices=loadNotices();
-  if(!notices.length){list.innerHTML='<div class="empty" style="padding:20px 0"><p>No announcements — tap ↻ Refresh</p></div>';return;}
-  list.innerHTML=notices.map((n,i)=>noticeCardHTML(n,i,true)).join('');
+  if(!notices.length){
+    list.innerHTML='<div class="empty" style="padding:20px 0"><p>No announcements — tap ↻ Refresh</p></div>';
+    return;
+  }
+  const uc=unreadCount();
+  list.innerHTML='<button class="btn-secondary" style="margin-top:0" onclick="openNoticesListModal()">📋 View all announcements'+(uc>0?' · '+uc+' unread':'')+'</button>';
+}
+function openNoticesListModal(){
+  const notices=loadNotices();
+  if(!notices.length)return;
+  document.getElementById('modal-notices-list-content').innerHTML=
+    notices.map((n,i)=>noticeCardHTML(n,i,true)).join('');
+  openModal('modal-notices-list');
 }
 
 function renderProfiles(){
@@ -1275,6 +1366,104 @@ async function fetchWeather(){
 }
 
 function renderHomeWeather(){updateHomeUI();}
+
+// ── MENU ALERTS ──
+function loadMenuAlerts(){try{return JSON.parse(localStorage.getItem(MENU_KEY)||'[]')}catch{return[]}}
+function saveMenuAlerts(d){localStorage.setItem(MENU_KEY,JSON.stringify(d))}
+
+async function fetchMenuAlerts(){
+  try{
+    const text=await proxyFetch(MENU_PROXY);
+    const parsed=parseMenuAlertsCSV(text);
+    saveMenuAlerts(parsed);
+    renderMenuAlertsHome();
+  }catch(e){
+    console.warn('Menu alerts fetch failed:',e.message);
+  }
+}
+
+function parseMenuAlertsCSV(text){
+  const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const header=splitRow(lines[0]).map(c=>c.trim().toLowerCase());
+  const iDate=header.findIndex(h=>h==='date');
+  const iCat=header.findIndex(h=>['bar/food','category','cat','bar','type'].includes(h));
+  const iItem=header.findIndex(h=>h==='item');
+  const iNotes=header.findIndex(h=>['notes','note','details'].includes(h));
+  if(iItem===-1)return[];
+  return lines.slice(1).map(row=>{
+    if(!row.trim())return null;
+    const c=splitRow(row);
+    const dateStr=iDate!==-1?c[iDate]||'':'';
+    let dp='';
+    if(dateStr.includes('/')){const p=dateStr.split('/');if(p.length===3){const[d,m,y]=p;dp=`${y.length===2?'20'+y:y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;}}
+    else if(dateStr.match(/^\d{4}-\d{2}-\d{2}$/))dp=dateStr;
+    return{
+      date:dp,
+      category:iCat!==-1?c[iCat]||'':'',
+      item:c[iItem]||'',
+      notes:iNotes!==-1?c[iNotes]||'':''
+    };
+  }).filter(Boolean).filter(a=>a.item)
+  .sort((a,b)=>{
+    // Today's alerts first, then by date desc
+    const today=getBDS(new Date());
+    if(a.date===today&&b.date!==today)return-1;
+    if(b.date===today&&a.date!==today)return 1;
+    return b.date.localeCompare(a.date);
+  });
+}
+
+function menuAlertCardHTML(a){
+  const today=getBDS(new Date());
+  const isToday=a.date===today;
+  const todayClass=isToday?' today':'';
+  const catClass=isToday?' today':'';
+  return'<div class="menu-alert-card'+todayClass+'" onclick="openMenuAlertsModal()">'+
+    '<div class="menu-alert-header">'+
+      '<div class="menu-alert-item">'+a.item+'</div>'+
+      (a.category?'<span class="menu-alert-cat'+catClass+'">'+a.category+'</span>':'')+
+    '</div>'+
+    (a.notes?'<div class="menu-alert-notes">'+a.notes+'</div>':'')+
+    (a.date?'<div class="menu-alert-date">'+(isToday?'Today':''+a.date)+'</div>':'')+
+  '</div>';
+}
+
+function openMenuAlertsModal(){
+  const alerts=loadMenuAlerts();
+  document.getElementById('modal-menu-alerts-content').innerHTML=
+    alerts.length?alerts.map(a=>menuAlertCardHTML(a)).join(''):'<p style="color:var(--ink3);font-size:14px">No menu alerts.</p>';
+  openModal('modal-menu-alerts');
+}
+
+function renderMenuAlertsHome(){
+  const card=document.getElementById('menu-alerts-home-card');
+  if(!card)return;
+  const alerts=loadMenuAlerts();
+  if(!alerts.length){card.innerHTML='';return;}
+  const today=getBDS(new Date());
+  const todayAlerts=alerts.filter(a=>a.date===today);
+  const otherAlerts=alerts.filter(a=>a.date!==today);
+  const total=alerts.length;
+  const todayCount=todayAlerts.length;
+  // Preview: show first alert (today's if any, else most recent)
+  const preview=alerts[0];
+  const isToday=preview.date===today;
+  const todayClass=isToday?' today':'';
+  const label=todayCount>0
+    ?todayCount+' menu alert'+(todayCount>1?'s':'')+' today'+(total>todayCount?' · '+otherAlerts.length+' other':'')
+    :total+' menu alert'+(total>1?'s':'');
+  card.innerHTML=
+    '<div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#b45309;margin:4px 0 8px">⚠ '+label+'</div>'+
+    '<div class="menu-alert-card'+todayClass+'" onclick="openMenuAlertsModal()">'+
+      '<div class="menu-alert-header">'+
+        '<div class="menu-alert-item">'+preview.item+'</div>'+
+        (preview.category?'<span class="menu-alert-cat'+todayClass+'">'+preview.category+'</span>':'')+
+      '</div>'+
+      (preview.notes?'<div class="menu-alert-notes">'+preview.notes+'</div>':'')+
+      (total>1?'<div style="font-size:11px;color:#b45309;margin-top:4px">Tap to see all '+total+' alerts</div>':'')+
+    '</div>';
+}
 
 document.addEventListener('DOMContentLoaded',init);
 
