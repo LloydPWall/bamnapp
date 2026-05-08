@@ -120,6 +120,15 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .view-toggle button.active{background:var(--ink);color:var(--yolk-light)}
 /* Day popup */
 #modal-day .sched-row{margin-bottom:8px}
+/* Weather */
+.weather-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;margin-top:2px}
+.weather-temp{font-size:9px;color:var(--ink2);font-weight:500;line-height:1}
+.weather-icon svg{display:block}
+.home-weather{background:#fff;border:1px solid var(--paper3);border-radius:var(--radius);padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:14px}
+.home-weather-icon svg{width:40px;height:40px}
+.home-weather-info{}
+.home-weather-temp{font-family:var(--serif);font-size:28px;color:var(--ink);line-height:1}
+.home-weather-desc{font-size:13px;color:var(--ink3);margin-top:2px}
 /* Profiles */
 .role-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 8px;border-radius:20px;color:#fff;margin-left:4px;vertical-align:middle}
 .profile-card-wrap{background:#fff;border:1px solid var(--paper3);border-radius:var(--radius);padding:18px;margin-bottom:12px;display:flex;align-items:center;gap:16px}
@@ -246,6 +255,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <div id="next-shift-card"></div>
       <div id="projected-home-card"></div>
       <div id="flags-container"></div>
+      <div id="home-weather-card"></div>
       <div id="notices-home-card"></div>
     </div>
 
@@ -368,7 +378,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v2.0.3</div>
+      <div class="version-tag">BamnApp v2.1.0</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -640,8 +650,12 @@ function updateHomeUI(){
   const uname=getName();
   const greetEl=document.getElementById('home-greeting');
   const avatarEl=document.getElementById('home-avatar');
-  if(greetEl) greetEl.textContent=uname?'Hello, '+uname+'!':'Welcome!';
-  if(avatarEl) avatarEl.innerHTML=uname?mkAvatar(uname,44):'';
+  if(greetEl){
+    const hour=parseInt(new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',hour12:false}).format(now));
+    const tod=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+    greetEl.innerHTML=uname?tod+', <span style="color:var(--yolk)">'+uname+'</span>!':'BamnApp';
+  }
+  if(avatarEl&&uname) avatarEl.innerHTML=mkAvatar(uname,40);
   const open=getOpen();
   const btn=document.getElementById('clock-btn');
   if(open){
@@ -664,7 +678,7 @@ function updateHomeUI(){
   document.getElementById('stat-week').textContent=hrs(sumMs('week')+openMs);
   document.getElementById('stat-month').textContent=hrs(sumMs('month')+openMs);
   document.getElementById('stat-all').textContent=hrs(sumMs('all')+openMs);
-  renderNextShift();renderProjectedHome();
+  renderNextShift();renderProjectedHome();renderHomeWeather();
   renderNoticesHome();
   const flagged=shifts.filter(s=>s.flagged);
   const fc=document.getElementById('flags-container');fc.innerHTML='';
@@ -975,6 +989,7 @@ function init(){
     });
   }
   refreshNotices();
+  fetchWeather();
   setInterval(updateHomeUI,60000);
 }
 // ── CSV RESTORE ──
@@ -1078,7 +1093,8 @@ async function globalRefresh(){
     refreshSchedule(),
     refreshReservations(),
     refreshTips(),
-    refreshNotices()
+    refreshNotices(),
+    fetchWeather()
   ]);
   btn.style.opacity='';btn.style.pointerEvents='';
   updateHomeUI();
@@ -1173,7 +1189,8 @@ function renderProfiles(){
   if(pw){
     if(p){
       const pcolor=rc(p.role);
-      pw.innerHTML='<div class="profile-card-wrap">'+mkAvatar(p.name,60)+'<div><div class="profile-name">'+p.display+'</div>'+(p.pronouns?'<div class="profile-sub">'+p.pronouns+'</div>':'')+'<div style="margin-top:6px"><span class="role-badge" style="background:'+pcolor+';font-size:12px;padding:3px 12px">'+p.role+'</span></div></div></div>';
+      const badge='<span class="role-badge" style="background:'+pcolor+';font-size:12px;padding:3px 12px">'+p.role+'</span>';
+      pw.innerHTML='<div class="profile-card-wrap">'+mkAvatar(p.name,60)+'<div><div class="profile-name">'+p.display+'</div>'+(p.pronouns?'<div class="profile-sub">'+p.pronouns+'</div>':'')+'<div style="margin-top:6px">'+badge+'</div></div></div>';
     } else {
       pw.innerHTML='<div style="font-size:13px;color:var(--ink3);padding:4px 0 8px">Set your name above to see your profile.</div>';
     }
@@ -1183,6 +1200,74 @@ function renderProfiles(){
     const sorted=[...TEAM].sort((a,b)=>order.indexOf(a.role)-order.indexOf(b.role));
     tg.innerHTML='<div class="team-grid">'+sorted.map(m=>'<div class="team-tile">'+mkAvatar(m.name,32)+'<div><div class="team-tile-name">'+m.display+'</div><div class="team-tile-role" style="color:'+rc(m.role)+'">'+m.role+'</div></div></div>').join('')+'</div>';
   }
+}
+
+// ── WEATHER ──
+// WMO weather codes → {label, icon SVG}
+function wmoIcon(code,size){
+  const s=size||16;
+  // Sun
+  const sun='<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>';
+  // Cloud
+  const cloud='<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>';
+  // Partly cloudy
+  const partcloud='<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="10" cy="8" r="3.5" fill="#fde68a" stroke="#f59e0b"/><path d="M17 14h-0.8A5 5 0 1 0 7 19h10a3.5 3.5 0 0 0 0-7z" fill="#e5e7eb" stroke="#9ca3af"/></svg>';
+  // Rain
+  const rain='<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M20 16.2A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" fill="#e5e7eb" stroke="#9ca3af"/><line x1="8" y1="19" x2="8" y2="21" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12" y2="21" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="19" x2="16" y2="21" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/></svg>';
+  // Heavy rain / drizzle
+  const heavyrain='<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M20 16.2A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" fill="#d1d5db" stroke="#6b7280"/><line x1="7" y1="18" x2="6" y2="22" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/><line x1="11" y1="16" x2="10" y2="22" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/><line x1="15" y1="18" x2="14" y2="22" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/></svg>';
+  // Snow
+  const snow='<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M20 16.2A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" fill="#e5e7eb" stroke="#9ca3af"/><line x1="12" y1="17" x2="12" y2="22" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="19.5" x2="15" y2="19.5" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/></svg>';
+  // Thunder
+  const thunder='<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" fill="#d1d5db" stroke="#6b7280"/><polyline points="13 11 9 17 13 17 9 23" stroke="#fbbf24" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
+  // Fog
+  const fog='<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8"><line x1="3" y1="9" x2="21" y2="9" stroke-linecap="round"/><line x1="3" y1="13" x2="21" y2="13" stroke-linecap="round"/><line x1="5" y1="17" x2="19" y2="17" stroke-linecap="round"/></svg>';
+
+  if(code===0) return{icon:sun,label:'Clear'};
+  if(code<=2) return{icon:partcloud,label:'Partly cloudy'};
+  if(code===3) return{icon:cloud,label:'Overcast'};
+  if(code<=49) return{icon:fog,label:'Foggy'};
+  if(code<=57) return{icon:rain,label:'Drizzle'};
+  if(code<=67) return{icon:rain,label:'Rain'};
+  if(code<=77) return{icon:snow,label:'Snow'};
+  if(code<=82) return{icon:heavyrain,label:'Showers'};
+  if(code<=84) return{icon:snow,label:'Snow showers'};
+  if(code<=99) return{icon:thunder,label:'Thunderstorm'};
+  return{icon:cloud,label:'Unknown'};
+}
+
+function loadWeather(){try{return JSON.parse(localStorage.getItem(WEATHER_KEY)||'null')}catch{return null}}
+function saveWeather(d){localStorage.setItem(WEATHER_KEY,JSON.stringify(d))}
+
+async function fetchWeather(){
+  try{
+    const url='https://api.open-meteo.com/v1/forecast?latitude=52.499&longitude=13.404&daily=weathercode,temperature_2m_max&timezone=Europe%2FBerlin&forecast_days=14';
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const data=await r.json();
+    const days={};
+    data.daily.time.forEach((date,i)=>{
+      days[date]={code:data.daily.weathercode[i],max:Math.round(data.daily.temperature_2m_max[i])};
+    });
+    saveWeather({days,fetched:Date.now()});
+    renderHomeWeather();
+    // Re-render calendar if visible
+    if(document.getElementById('screen-schedule').classList.contains('active')) renderCalendar();
+  }catch(e){
+    console.warn('Weather fetch failed:',e.message);
+  }
+}
+
+function renderHomeWeather(){
+  const card=document.getElementById('home-weather-card');
+  if(!card)return;
+  const w=loadWeather();
+  if(!w)return;
+  const todayStr=getBDS(new Date());
+  const today=w.days[todayStr];
+  if(!today){card.innerHTML='';return;}
+  const{icon,label}=wmoIcon(today.code,40);
+  card.innerHTML='<div class="home-weather"><div class="home-weather-icon">'+icon+'</div><div class="home-weather-info"><div class="home-weather-temp">'+today.max+'°C</div><div class="home-weather-desc">'+label+' · Berlin Kreuzberg</div></div></div>';
 }
 
 document.addEventListener('DOMContentLoaded',init);
@@ -1223,6 +1308,7 @@ function renderCalendar(){
   const myDays=new Set();
   if(name) sched.filter(s=>s.employee.toLowerCase()===name).forEach(s=>myDays.add(getBDS(new Date(s.start))));
   const todayStr=getBDS(now);
+  const weather=loadWeather();
   const first=new Date(calYear,calMonth,1);
   const lastDay=new Date(calYear,calMonth+1,0).getDate();
   const startDow=(first.getDay()+6)%7;
@@ -1238,8 +1324,10 @@ function renderCalendar(){
     // tappable if any shifts exist that day
     const onclick=hasAny?`onclick="openDayModal('${ds}')"`:'';
     // highlighted (yellow) only if it's the user's shift day; otherwise subtle dot for other-staff days
+    const wdata=weather&&weather.days?weather.days[ds]:null;
+    const wbit=wdata?'<div class="weather-cell"><div class="weather-icon">'+wmoIcon(wdata.code,12).icon+'</div><div class="weather-temp">'+wdata.max+'°</div></div>':'';
     cells+=`<div class="cal-cell${isMe?' has-shift':''}${hasAny&&!isMe?' has-other':''}${isToday?' today':''}" ${onclick}>
-      <span class="cal-num">${d}</span>${isMe?'<span class="cal-dot"></span>':hasAny?'<span class="cal-dot" style="background:var(--ink3);opacity:0.35"></span>':''}
+      <span class="cal-num">${d}</span>${isMe?'<span class="cal-dot"></span>':hasAny?'<span class="cal-dot" style="background:var(--ink3);opacity:0.35"></span>':''}${wbit}
     </div>`;
   }
   document.getElementById('sched-cal').innerHTML=`
