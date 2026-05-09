@@ -256,9 +256,9 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       </div>
       <div id="live-time"></div>
       <div id="current-shift-info"></div>
+      <div id="next-shift-card"></div>
       <div id="menu-alerts-home-card"></div>
       <div id="notices-home-card"></div>
-      <div id="next-shift-card"></div>
       <div id="projected-home-card"></div>
       <div id="flags-container"></div>
     </div>
@@ -388,7 +388,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v2.3.0</div>
+      <div class="version-tag">BamnApp v2.3.1</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -1374,7 +1374,9 @@ function saveMenuAlerts(d){localStorage.setItem(MENU_KEY,JSON.stringify(d))}
 async function fetchMenuAlerts(){
   try{
     const text=await proxyFetch(MENU_PROXY);
+    console.log('Menu raw:',text.slice(0,300));
     const parsed=parseMenuAlertsCSV(text);
+    console.log('Menu parsed:',parsed.length,JSON.stringify(parsed));
     saveMenuAlerts(parsed);
     renderMenuAlertsHome();
   }catch(e){
@@ -1422,7 +1424,7 @@ function menuAlertCardHTML(a){
   return'<div class="menu-alert-card'+todayClass+'" onclick="openMenuAlertsModal()">'+
     '<div class="menu-alert-header">'+
       '<div class="menu-alert-item">'+a.item+'</div>'+
-      (a.category?'<span class="menu-alert-cat'+catClass+'">'+a.category+'</span>':'')+
+      (a.category?(()=>{const cat=a.category.toLowerCase();const bg=cat==='food'?'#16A34A':cat==='bar'?'#7C3AED':'#d97706';return'<span class="menu-alert-cat" style="background:'+bg+'">'+a.category+'</span>';})():'') +
     '</div>'+
     (a.notes?'<div class="menu-alert-notes">'+a.notes+'</div>':'')+
     (a.date?'<div class="menu-alert-date">'+(isToday?'Today':''+a.date)+'</div>':'')+
@@ -1458,7 +1460,7 @@ function renderMenuAlertsHome(){
     '<div class="menu-alert-card'+todayClass+'" onclick="openMenuAlertsModal()">'+
       '<div class="menu-alert-header">'+
         '<div class="menu-alert-item">'+preview.item+'</div>'+
-        (preview.category?'<span class="menu-alert-cat'+todayClass+'">'+preview.category+'</span>':'')+
+        (preview.category?(()=>{const cat=preview.category.toLowerCase();const bg=cat==='food'?'#16A34A':cat==='bar'?'#7C3AED':'#d97706';return'<span class="menu-alert-cat" style="background:'+bg+'">'+preview.category+'</span>';})():'')+
       '</div>'+
       (preview.notes?'<div class="menu-alert-notes">'+preview.notes+'</div>':'')+
       (total>1?'<div style="font-size:11px;color:#b45309;margin-top:4px">Tap to see all '+total+' alerts</div>':'')+
@@ -1545,7 +1547,9 @@ function openDayModal(ds){
   const name=getName().toLowerCase();
   const dayShifts=sched.filter(s=>getBDS(new Date(s.start))===ds).sort((a,b)=>new Date(a.start)-new Date(b.start));
   const dateLabel=fmtDayShort(new Date(ds+'T12:00:00'));
-  document.getElementById('modal-day-title').textContent=dateLabel;
+  const wday2=loadWeather()&&loadWeather().days?loadWeather().days[ds]:null;
+  const wbit2=wday2?'<span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:400;color:var(--ink3)">'+wmoIcon(wday2.code,18).icon+' '+wday2.max+'°C</span>':'';
+  document.getElementById('modal-day-title').innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>'+dateLabel+'</span>'+wbit2+'</div>';
   const myShifts=dayShifts.filter(s=>name&&s.employee.toLowerCase()===name);
   const othersShifts=dayShifts.filter(s=>!name||s.employee.toLowerCase()!==name);
   let html='';
