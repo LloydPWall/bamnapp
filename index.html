@@ -129,6 +129,14 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .home-weather-info{}
 .home-weather-temp{font-family:var(--serif);font-size:28px;color:var(--ink);line-height:1}
 .home-weather-desc{font-size:13px;color:var(--ink3);margin-top:2px}
+/* More tab */
+.more-nav-btn{width:100%;background:#fff;border:1px solid var(--paper3);border-radius:var(--radius);padding:16px 18px;font-family:var(--sans);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;transition:background 0.12s}
+.more-nav-btn:active{background:var(--paper2)}
+.more-nav-chevron{margin-left:auto;color:var(--ink3)}
+.more-sub-header{display:flex;align-items:center;gap:12px;padding:20px 0 8px;margin-bottom:8px;border-bottom:1px solid var(--paper3)}
+.more-sub-header h2{font-family:var(--serif);font-size:22px;color:var(--ink);margin:0}
+.more-back-btn{background:none;border:none;font-family:var(--sans);font-size:14px;color:var(--ink3);cursor:pointer;padding:0;white-space:nowrap}
+.more-back-btn:active{opacity:0.6}
 /* Specs */
 .specs-search{width:100%;padding:11px 14px;border:1px solid var(--paper3);border-radius:var(--radius-sm);font-family:var(--sans);font-size:15px;color:var(--ink);background:#fff;outline:none;margin-bottom:12px;}
 .specs-search:focus{border-color:var(--yolk)}
@@ -201,7 +209,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <li>Your clock-in and clock-out times</li>
       <li>Any manual corrections, including original timestamps</li>
       <li>Correction reasons you enter</li>
-      <li>Schedule data (fetched automatically when you refresh the Rota tab)</li>
+      <li>Schedule data (fetched automatically when you refresh the Calendar tab)</li>
       <li>Reservations data (fetched from a shared source when you refresh)</li>
       <li>Tip data (fetched automatically when you refresh the Tips tab)</li>
     </ul>
@@ -307,7 +315,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
     <!-- ROTA (merged schedule + reservations) -->
     <div id="screen-schedule" class="screen">
       <div class="page-header">
-        <h1>Rota</h1>
+        <h1>Calendar</h1>
         <p id="sched-period-label">No schedule loaded</p>
       </div>
       <div id="sched-proj-card"></div>
@@ -334,81 +342,153 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <div id="specs-list"></div>
     </div>
 
-    <!-- MORE (Export + About merged) -->
+    <!-- MORE — landing + sub-screens -->
     <div id="screen-more" class="screen">
-      <div class="page-header"><h1>More</h1></div>
 
-      <div class="section-title" style="margin-top:0;border-top:none;padding-top:0">Tips</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button class="btn-small primary" onclick="refreshTips()">↻ Refresh</button>
+      <!-- LANDING PAGE -->
+      <div id="more-landing">
+        <div class="page-header"><h1>More</h1></div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="more-nav-btn" onclick="showMoreSection('more-tips')">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17.5 8.5A6 6 0 1 0 17.5 15.5"/><line x1="3" y1="10" x2="14" y2="10"/><line x1="3" y1="14" x2="14" y2="14"/></svg>
+            Tips
+            <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button class="more-nav-btn" onclick="showMoreSection('more-export')">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export shifts
+            <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button class="more-nav-btn" onclick="showMoreSection('more-announcements')">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M22 17H2a3 3 0 000 6h20a3 3 0 000-6zM6 17V7a6 6 0 0112 0v10"/></svg>
+            Announcements
+            <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button class="more-nav-btn" onclick="showMoreSection('more-profile')">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Profile &amp; Team
+            <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button class="more-nav-btn" onclick="showMoreSection('more-about')">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            About &amp; Data
+            <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button class="more-nav-btn" onclick="showMoreSection('more-floorplans')">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Floor Plans
+            <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <div class="version-tag">BamnApp v2.5.1</div>
+        <div style="text-align:center;padding-bottom:20px">
+          <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
+          <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
+        </div>
       </div>
-      <div class="info-block" style="background:var(--yolk-pale);border-color:#e8d890;margin-bottom:10px">
-        <p style="font-size:12px;color:var(--yolk-dim);line-height:1.6">Estimates only. Based on your logged times and scheduled colleague hours. Actual amounts may differ. Service hours: Mon–Thu 18:00–22:30 · Fri–Sat 12:00–23:30 · Sun 12:00–17:00.</p>
-      </div>
-      <div id="tips-list"></div>
-      <div class="section-title">Export shifts</div>
-      <div class="date-range" style="margin-bottom:10px">
-        <div class="form-group"><label class="form-label">From</label><input class="form-input" type="date" id="export-from"/></div>
-        <div class="form-group"><label class="form-label">To</label><input class="form-input" type="date" id="export-to"/></div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-        <button class="btn-small" onclick="setExportRange('week')">This week</button>
-        <button class="btn-small" onclick="setExportRange('lastweek')">Last week</button>
-        <button class="btn-small" onclick="setExportRange('month')">This month</button>
-        <button class="btn-small" onclick="setExportRange('lastmonth')">Last month</button>
-        <button class="btn-small" onclick="setExportRange('all')">All time</button>
-      </div>
-      <button class="btn-primary" onclick="exportCSV()">Download CSV</button>
 
-      <div class="section-title" style="margin-top:0;border-top:none;padding-top:0">Your profile</div>
-      <div id="profile-card-wrap"></div>
-      <div class="section-title">Team</div>
-      <div id="team-grid-wrap"></div>
-      <div class="section-title">About</div>
-      <div class="info-block">
-        <h3>What BamnApp is</h3>
-        <p>An informal, employee-facing shift tracker. Not the official payroll or HR record. Use it to track your own hours and raise discrepancies with your manager.</p>
+      <!-- TIPS SUB-SCREEN -->
+      <div id="more-tips" class="more-section" style="display:none">
+        <div class="more-sub-header"><button class="more-back-btn" onclick="showMoreLanding()">← Back</button><h2>Tips</h2></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="btn-small primary" onclick="refreshTips()">↻ Refresh</button>
+        </div>
+        <div class="info-block" style="background:var(--yolk-pale);border-color:#e8d890;margin-bottom:10px">
+          <p style="font-size:12px;color:var(--yolk-dim);line-height:1.6">Estimates only. Based on your logged times and scheduled colleague hours. Actual amounts may differ. Service hours: Mon–Thu 18:00–22:30 · Fri–Sat 12:00–23:30 · Sun 12:00–17:00.</p>
+        </div>
+        <div id="tips-list"></div>
       </div>
-      <div class="info-block">
-        <h3>Your data</h3>
-        <ul>
-          <li>Stored only on this device, in your browser</li>
-          <li>Not sent to any server</li>
-          <li>Shift data kept for 30 days, then removed automatically</li>
-          <li>Lost if you clear browser storage or switch devices</li>
-        </ul>
+
+      <!-- EXPORT SUB-SCREEN -->
+      <div id="more-export" class="more-section" style="display:none">
+        <div class="more-sub-header"><button class="more-back-btn" onclick="showMoreLanding()">← Back</button><h2>Export shifts</h2></div>
+        <div class="date-range" style="margin-bottom:10px">
+          <div class="form-group"><label class="form-label">From</label><input class="form-input" type="date" id="export-from"/></div>
+          <div class="form-group"><label class="form-label">To</label><input class="form-input" type="date" id="export-to"/></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="btn-small" onclick="setExportRange('week')">This week</button>
+          <button class="btn-small" onclick="setExportRange('lastweek')">Last week</button>
+          <button class="btn-small" onclick="setExportRange('month')">This month</button>
+          <button class="btn-small" onclick="setExportRange('lastmonth')">Last month</button>
+          <button class="btn-small" onclick="setExportRange('all')">All time</button>
+        </div>
+        <button class="btn-primary" onclick="exportCSV()">Download CSV</button>
       </div>
-      <div class="info-block">
-        <h3>Your name</h3>
-        <p id="info-name-display" style="margin-bottom:10px"></p>
+
+      <!-- ANNOUNCEMENTS SUB-SCREEN -->
+      <div id="more-announcements" class="more-section" style="display:none">
+        <div class="more-sub-header"><button class="more-back-btn" onclick="showMoreLanding()">← Back</button><h2>Announcements</h2></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="btn-small primary" onclick="refreshNotices()">↻ Refresh</button>
+        </div>
+        <div id="notices-more-list"></div>
+      </div>
+
+      <!-- PROFILE & TEAM SUB-SCREEN -->
+      <div id="more-profile" class="more-section" style="display:none">
+        <div class="more-sub-header"><button class="more-back-btn" onclick="showMoreLanding()">← Back</button><h2>Profile &amp; Team</h2></div>
+        <div class="section-title" style="border-top:none;margin-top:0;padding-top:0">Your profile</div>
+        <div id="profile-card-wrap"></div>
+        <div class="section-title">Your name</div>
+        <p id="info-name-display" style="font-size:13px;color:var(--ink3);margin-bottom:10px"></p>
         <button class="btn-small" onclick="openChangeName()">Change name</button>
+        <div class="section-title">Team</div>
+        <div id="team-grid-wrap"></div>
       </div>
-      <div class="info-block">
-        <h3>Corrections</h3>
-        <p>You can correct any shift freely. Original timestamps are always preserved. Export a CSV to share with your manager.</p>
+
+      <!-- ABOUT & DATA SUB-SCREEN -->
+      <div id="more-about" class="more-section" style="display:none">
+        <div class="more-sub-header"><button class="more-back-btn" onclick="showMoreLanding()">← Back</button><h2>About &amp; Data</h2></div>
+        <div class="info-block">
+          <h3>What BamnApp is</h3>
+          <p>An informal, employee-facing shift tracker. Not the official payroll or HR record.</p>
+        </div>
+        <div class="info-block">
+          <h3>Your data</h3>
+          <ul>
+            <li>Stored only on this device, in your browser</li>
+            <li>Not sent to any server</li>
+            <li>Shift data kept for 30 days, then removed automatically</li>
+            <li>Lost if you clear browser storage or switch devices</li>
+          </ul>
+        </div>
+        <div class="info-block">
+          <h3>Corrections</h3>
+          <p>You can correct any shift freely. Original timestamps are always preserved. Export a CSV to share with your manager.</p>
+        </div>
+        <div class="info-block" style="background:var(--warn-pale);border-color:#e8b8a8">
+          <h3 style="color:var(--warn)">Important</h3>
+          <p style="color:#8b3010">Export your CSV regularly. If you lose your device data, there is no way to recover it.</p>
+        </div>
+        <div class="section-title">Backup &amp; Restore</div>
+        <div class="info-block" style="margin-bottom:10px">
+          <p style="font-size:13px;color:var(--ink3);line-height:1.6">Export your shifts regularly as a backup. If you ever lose your data, upload your backup CSV here to restore it.</p>
+        </div>
+        <button class="btn-secondary" style="margin-top:0" onclick="document.getElementById('restore-file-input').click()">↑ Restore from backup CSV</button>
+        <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
+        <div class="section-title">Data</div>
+        <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
       </div>
-      <div class="info-block" style="background:var(--warn-pale);border-color:#e8b8a8">
-        <h3 style="color:var(--warn)">Important</h3>
-        <p style="color:#8b3010">Export your CSV regularly. If you lose your device data, there is no way to recover it.</p>
+
+      <!-- FLOOR PLANS SUB-SCREEN -->
+      <div id="more-floorplans" class="more-section" style="display:none">
+        <div class="more-sub-header"><button class="more-back-btn" onclick="showMoreLanding()">← Back</button><h2>Floor Plans</h2></div>
+        <div style="margin-bottom:20px">
+          <div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px">Kitchen &amp; Interior</div>
+          <div style="overflow:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--paper3);border-radius:var(--radius-sm)">
+            <img src="./Kitchen%20Tables.png" alt="Kitchen floor plan" style="width:100%;display:block;border-radius:var(--radius-sm)" onerror="this.parentElement.innerHTML='<div style=padding:20px;color:var(--ink3);font-size:13px>Could not load floor plan</div>'"/>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px">Terrace</div>
+          <div style="overflow:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--paper3);border-radius:var(--radius-sm)">
+            <img src="./Terrace%20Tables.png" alt="Terrace floor plan" style="width:100%;display:block;border-radius:var(--radius-sm)" onerror="this.parentElement.innerHTML='<div style=padding:20px;color:var(--ink3);font-size:13px>Could not load floor plan</div>'"/>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--ink3);text-align:center;margin-top:12px">Pinch to zoom · Scroll to pan</p>
       </div>
-      <div class="section-title">Announcements</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button class="btn-small primary" onclick="refreshNotices()">↻ Refresh</button>
-      </div>
-      <div id="notices-more-list"></div>
-      <div class="section-title">Backup &amp; Restore</div>
-      <div class="info-block" style="margin-bottom:10px">
-        <p style="font-size:13px;color:var(--ink3);line-height:1.6">Export your shifts regularly as a backup. If you ever lose your data, upload your backup CSV here to restore it.</p>
-      </div>
-      <button class="btn-secondary" style="margin-top:0" onclick="document.getElementById('restore-file-input').click()">↑ Restore from backup CSV</button>
-      <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
-      <div class="section-title">Data</div>
-      <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v2.4.1</div>
-      <div style="text-align:center;padding-bottom:20px">
-        <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
-        <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
-      </div>
+
     </div>
   </div>
 
@@ -421,7 +501,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Shifts
     </button>
     <button onclick="showScreen('schedule',this)" id="nav-schedule">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>Rota
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>Calendar
     </button>
     <button onclick="showScreen('specs',this)" id="nav-specs">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18"/></svg>Specs
@@ -686,7 +766,7 @@ function showScreen(name,btn){
   if(name==='shifts')renderShifts();
   if(name==='schedule')renderSchedule();
   if(name==='specs')renderSpecs();
-  if(name==='more'){const n=getName();document.getElementById('info-name-display').textContent=n?'Saved as: '+n:'No name saved.';renderNoticesMore();renderProfiles();renderTipsScreen();}
+  if(name==='more'){showMoreLanding();}
   if(name==='home')updateHomeUI();
 }
 function openModal(id){document.getElementById(id).classList.add('open')}
@@ -937,7 +1017,7 @@ async function refreshSchedule(){
     showToast(`Rota refreshed — ${parsed.length} shift${parsed.length!==1?'s':''} loaded`);
   }catch(e){
     document.getElementById('sched-period-label').textContent='Could not load — check connection';
-    showToast('Failed to fetch rota');
+    showToast('Failed to fetch calendar');
   }
 }
 function parseScheduleText(text){
@@ -949,7 +1029,7 @@ function parseScheduleText(text){
   const iEmp=header.findIndex(h=>['employee','name','staff'].includes(h));
   const iStart=header.findIndex(h=>['start','start time','from','von'].includes(h));
   const iEnd=header.findIndex(h=>['end','end time','to','finish','bis'].includes(h));
-  if(iDate===-1||iStart===-1||iEnd===-1){showToast('Rota format not recognised — check sheet headers');return[];}
+  if(iDate===-1||iStart===-1||iEnd===-1){showToast('Calendar format not recognised — check sheet headers');return[];}
   const results=[];
   for(const row of lines.slice(1)){
     if(!row.trim())continue;
@@ -976,7 +1056,7 @@ function parseScheduleText(text){
 function renderSchedule(){
   const all=loadSched(),label=document.getElementById('sched-period-label');
   if(!all.length){
-    label.textContent='No rota loaded — tap ↻ Refresh';
+    label.textContent='No schedule loaded — tap ↻ Refresh';
     document.getElementById('sched-proj-card').innerHTML='';
     document.getElementById('sched-cal').innerHTML=`<div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg><p>Tap ↻ Refresh to load the rota</p></div>`;
     return;
@@ -999,7 +1079,7 @@ function renderSchedule(){
 async function refreshRota(){
   await Promise.allSettled([refreshSchedule(), refreshReservations()]);
 }
-function clearSchedule(){if(!confirm('Clear the rota? It can be reloaded by tapping Refresh.'))return;saveSched([]);renderSchedule();updateHomeUI();showToast('Rota cleared');}
+function clearSchedule(){if(!confirm('Clear the calendar? It can be reloaded by tapping Refresh.'))return;saveSched([]);renderSchedule();updateHomeUI();showToast('Calendar cleared');}
 // ── EXPORT ──
 function setExportRange(range){
   const now=new Date(),fmt=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
@@ -1577,7 +1657,7 @@ function renderSpecs(){
   list.innerHTML=filtered.map((d,i)=>{
     const idx=all.indexOf(d);
     return'<div class="drink-row" onclick="openRecipeModal('+idx+')">'+
-      '<div style="display:flex;align-items:center">'+glassIcon(d.glass)+'<div class="drink-name">'+d.product+'</div></div>'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="drink-name">'+d.product+'</div><span style="flex-shrink:0;opacity:0.45">'+glassIcon(d.glass)+'</span></div>'+
       '<div class="drink-meta">'+d.type+(d.glass?' · '+d.glass:'')+(d.method?' · '+d.method:'')+'</div>'+
     '</div>';
   }).join('');
@@ -1589,7 +1669,7 @@ function openRecipeModal(idx){
   document.getElementById('modal-recipe-title').textContent=d.product;
   let html='';
   // Glass + method
-  html+='<div class="recipe-glass">'+glassIcon(d.glass)+d.glass+(d.method?'<span class="recipe-method">'+d.method+'</span>':'')+'</div>';
+  html+='<div class="recipe-glass" style="display:flex;align-items:center;gap:8px">'+glassIcon(d.glass)+'<span>'+d.glass+(d.method?'</span><span class="recipe-method">'+d.method+'</span>':'</span>')+'</div>';
   // Ingredients
   if(d.ingredients.length){
     html+='<div class="recipe-ingredients">';
@@ -1607,6 +1687,28 @@ function openRecipeModal(idx){
   }
   document.getElementById('modal-recipe-content').innerHTML=html;
   openModal('modal-recipe');
+}
+
+// ── MORE TAB NAVIGATION ──
+function showMoreLanding(){
+  document.getElementById('more-landing').style.display='block';
+  document.querySelectorAll('.more-section').forEach(s=>s.style.display='none');
+}
+function showMoreSection(id){
+  document.getElementById('more-landing').style.display='none';
+  document.querySelectorAll('.more-section').forEach(s=>s.style.display='none');
+  document.getElementById(id).style.display='block';
+  // Trigger data loads for specific sections
+  if(id==='more-tips')renderTipsScreen();
+  if(id==='more-profile'){renderProfiles();}
+  if(id==='more-announcements')renderNoticesMore();
+  if(id==='more-export'){
+    const now=new Date(),fmt=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+    if(!document.getElementById('export-from').value){
+      document.getElementById('export-from').value=fmt(new Date(getMonthBounds().start));
+      document.getElementById('export-to').value=fmt(now);
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded',init);
