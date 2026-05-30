@@ -1,5 +1,5 @@
-const CACHE = 'bamnapp-v39';
-const ASSETS = ['./index.html', './manifest.json'];
+const CACHE = 'bamnapp-v41';
+const ASSETS = ['./index.html', './manifest.json', './Kitchen%20Tables.png', './Terrace%20Tables.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
