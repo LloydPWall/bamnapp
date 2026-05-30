@@ -404,7 +404,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
       <input type="file" id="restore-file-input" accept=".csv,text/csv,text/plain,application/csv" style="display:none" onchange="handleRestoreUpload(event)"/>
       <div class="section-title">Data</div>
       <button class="btn-secondary" onclick="confirmClearData()">Clear all shift data</button>
-      <div class="version-tag">BamnApp v2.4.0</div>
+      <div class="version-tag">BamnApp v2.4.1</div>
       <div style="text-align:center;padding-bottom:20px">
         <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
         <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -1541,6 +1541,21 @@ function setSpecsCat(btn,cat){
   renderSpecs();
 }
 
+function glassIcon(glass){
+  const icons={'Highball':`<svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" style="opacity:0.5;vertical-align:middle;margin-right:5px"><rect x="1" y="0" width="12" height="18" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="3" y="14" width="8" height="2" rx="0.5" opacity="0.3"/></svg>`,
+    'Wine Glass':`<svg width="14" height="18" viewBox="0 0 14 18" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:0.5;vertical-align:middle;margin-right:5px"><path d="M2 1 Q1 6 4 9 Q7 12 7 12 Q7 12 10 9 Q13 6 12 1Z"/><line x1="7" y1="12" x2="7" y2="16"/><line x1="4" y1="16" x2="10" y2="16"/></svg>`,
+    'Rocks':`<svg width="16" height="14" viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:0.5;vertical-align:middle;margin-right:5px"><path d="M1 2 L2 13 L14 13 L15 2 Z"/></svg>`,
+    'Nick & Nora':`<svg width="14" height="18" viewBox="0 0 14 18" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:0.5;vertical-align:middle;margin-right:5px"><path d="M2 2 Q1 8 4 10 Q7 12 7 12 Q7 12 10 10 Q13 8 12 2Z"/><line x1="7" y1="12" x2="7" y2="16"/><line x1="4" y1="16" x2="10" y2="16"/></svg>`,
+    'Coupe':`<svg width="16" height="18" viewBox="0 0 16 18" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:0.5;vertical-align:middle;margin-right:5px"><path d="M1 2 Q1 9 8 10 Q15 9 15 2Z"/><line x1="8" y1="10" x2="8" y2="15"/><line x1="5" y1="15" x2="11" y2="15"/></svg>`,
+    'Martini':`<svg width="16" height="18" viewBox="0 0 16 18" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:0.5;vertical-align:middle;margin-right:5px"><path d="M1 2 L8 12 L15 2Z"/><line x1="8" y1="12" x2="8" y2="16"/><line x1="5" y1="16" x2="11" y2="16"/></svg>`,
+    'Flute':`<svg width="10" height="18" viewBox="0 0 10 18" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:0.5;vertical-align:middle;margin-right:5px"><path d="M2 1 Q1 6 3 12 L7 12 Q9 6 8 1Z"/><line x1="5" y1="12" x2="5" y2="16"/><line x1="3" y1="16" x2="7" y2="16"/></svg>`,
+    'Mug':`<svg width="16" height="14" viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:0.5;vertical-align:middle;margin-right:5px"><rect x="1" y="1" width="11" height="12" rx="1"/><path d="M12 4 Q16 4 16 7 Q16 10 12 10"/></svg>`};
+  // Fuzzy match
+  if(!glass)return'';
+  const g=glass.trim();
+  for(const key of Object.keys(icons)){if(g.toLowerCase().includes(key.toLowerCase()))return icons[key];}
+  return'';
+}
 function renderSpecs(){
   const all=loadSpecs();
   const list=document.getElementById('specs-list');
@@ -1551,8 +1566,9 @@ function renderSpecs(){
   const q=(document.getElementById('specs-search')||{}).value||'';
   const ql=q.toLowerCase();
   const filtered=all.filter(d=>{
-    if(curSpecsCat!=='all'&&d.type!==curSpecsCat)return false;
-    if(ql&&!d.product.toLowerCase().includes(ql))return false;
+    // When searching, ignore category filter — search everything
+    if(!ql&&curSpecsCat!=='all'&&d.type!==curSpecsCat)return false;
+    if(ql&&!d.product.toLowerCase().includes(ql)&&!d.type.toLowerCase().includes(ql))return false;
     return true;
   });
   if(!filtered.length){
@@ -1561,7 +1577,7 @@ function renderSpecs(){
   list.innerHTML=filtered.map((d,i)=>{
     const idx=all.indexOf(d);
     return'<div class="drink-row" onclick="openRecipeModal('+idx+')">'+
-      '<div class="drink-name">'+d.product+'</div>'+
+      '<div style="display:flex;align-items:center">'+glassIcon(d.glass)+'<div class="drink-name">'+d.product+'</div></div>'+
       '<div class="drink-meta">'+d.type+(d.glass?' · '+d.glass:'')+(d.method?' · '+d.method:'')+'</div>'+
     '</div>';
   }).join('');
@@ -1573,7 +1589,7 @@ function openRecipeModal(idx){
   document.getElementById('modal-recipe-title').textContent=d.product;
   let html='';
   // Glass + method
-  html+='<div class="recipe-glass">'+d.glass+(d.method?'<span class="recipe-method">'+d.method+'</span>':'')+'</div>';
+  html+='<div class="recipe-glass">'+glassIcon(d.glass)+d.glass+(d.method?'<span class="recipe-method">'+d.method+'</span>':'')+'</div>';
   // Ingredients
   if(d.ingredients.length){
     html+='<div class="recipe-ingredients">';
@@ -1649,8 +1665,15 @@ function renderCalendar(){
     // highlighted (yellow) only if it's the user's shift day; otherwise subtle dot for other-staff days
     const wdata=weather&&weather.days?weather.days[ds]:null;
     const wbit=wdata?'<div class="weather-cell"><div class="weather-icon">'+wmoIcon(wdata.code,12).icon+'</div><div class="weather-temp">'+wdata.max+'°</div></div>':'';
+    const resv=loadResv().filter(r=>r.date===ds);
+    const resvDot=resv.length?'<span style="width:5px;height:5px;border-radius:50%;background:#2563EB;display:inline-block;margin-top:1px" title="'+resv.length+' booking'+( resv.length>1?'s':'')+'"></span>':'';
     cells+=`<div class="cal-cell${isMe?' has-shift':''}${hasAny&&!isMe?' has-other':''}${isToday?' today':''}" ${onclick}>
-      <span class="cal-num">${d}</span>${isMe?'<span class="cal-dot"></span>':hasAny?'<span class="cal-dot" style="background:var(--ink3);opacity:0.35"></span>':''}${wbit}
+      <span class="cal-num">${d}</span>
+      <div style="display:flex;gap:2px;align-items:center;justify-content:center">
+        ${isMe?'<span class="cal-dot"></span>':hasAny?'<span class="cal-dot" style="background:var(--ink3);opacity:0.35"></span>':''}
+        ${resvDot}
+      </div>
+      ${wbit}
     </div>`;
   }
   document.getElementById('sched-cal').innerHTML=`
