@@ -192,6 +192,9 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .notice-title{font-size:15px;font-weight:500;color:var(--ink);margin-bottom:3px}
 .notice-meta{font-size:11px;color:var(--ink3);letter-spacing:0.04em}
 .notice-preview{font-size:13px;color:var(--ink3);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* === JUICE: nav icon bounce === */
+@keyframes navIconBounce{0%{transform:scale(1)}35%{transform:scale(1.32) translateY(-2px)}65%{transform:scale(0.92)}100%{transform:scale(1)}}
+nav button.active svg{animation:navIconBounce 0.32s ease-out}
 /* === JUICE: compress → settle === */
 .btn-primary,.btn-secondary,.btn-small,.filter-btn,.cal-nav button,.more-nav-btn,.more-back-btn{transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),color 0.15s,background 0.12s,border-color 0.15s}
 nav button{transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),color 0.15s}
@@ -385,7 +388,7 @@ nav button{transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),color 0.15s}
             <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
-        <div class="version-tag">BamnApp v2.5.3</div>
+        <div class="version-tag">BamnApp v2.5.4</div>
         <div style="text-align:center;padding-bottom:20px">
           <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
           <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
