@@ -388,7 +388,7 @@ nav button{transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),color 0.15s}
             <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
-        <div class="version-tag">BamnApp v2.5.4</div>
+        <div class="version-tag">BamnApp v2.5.5</div>
         <div style="text-align:center;padding-bottom:20px">
           <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
           <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -2117,6 +2117,34 @@ function getTipEstimateForShift(s){
   if(!est)return'';
   return`<div class="tip-estimate">Est. tip: €${est.share.toFixed(2)}</div>`;
 }
+
+// ── TACTILE CLICK SOUND ──
+(function(){
+  let ctx=null;
+  function getCtx(){
+    if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();
+    return ctx;
+  }
+  function playTick(soft){
+    try{
+      const c=getCtx();
+      if(c.state==='suspended')c.resume();
+      const dur=soft?0.018:0.012;
+      const buf=c.createBuffer(1,Math.floor(c.sampleRate*dur),c.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,12);
+      const src=c.createBufferSource();src.buffer=buf;
+      const gain=c.createGain();gain.gain.value=soft?0.045:0.07;
+      src.connect(gain);gain.connect(c.destination);src.start();
+    }catch(e){}
+  }
+  document.addEventListener('pointerdown',function(e){
+    const el=e.target.closest('button,.drink-row,.notice-card,.menu-alert-card,.cal-cell.has-shift,.cal-cell.has-other');
+    if(!el)return;
+    const soft=!el.matches('button');
+    playTick(soft);
+  },{passive:true});
+})();
 </script>
 </body>
 </html>
