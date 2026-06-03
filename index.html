@@ -80,7 +80,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .upload-zone svg{width:32px;height:32px;margin:0 auto 8px;display:block;opacity:0.3}
 .upload-zone p{font-size:14px;color:var(--ink3)}.upload-zone small{font-size:12px;color:var(--ink3);opacity:0.7}
 .proj-bar-wrap{background:var(--paper2);border-radius:20px;height:8px;margin:8px 0 4px;overflow:hidden}
-.proj-bar{background:var(--yolk);height:100%;border-radius:20px;transition:width 0.4s ease}
+.proj-bar{background:var(--yolk);height:100%;border-radius:20px;transition:width 0.55s cubic-bezier(0.34,1.56,0.64,1)}
 .section-title{font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);padding:16px 0 8px;border-top:1px solid var(--paper3);margin-top:8px}
 #onboarding{position:fixed;inset:0;background:var(--ink);z-index:300;overflow-y:auto;padding:40px 24px 60px;display:flex;flex-direction:column;}
 .onboard-logo{font-family:var(--serif);font-size:40px;color:var(--yolk-light);margin-bottom:8px}
@@ -193,6 +193,12 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .notice-title{font-size:15px;font-weight:500;color:var(--ink);margin-bottom:3px}
 .notice-meta{font-size:11px;color:var(--ink3);letter-spacing:0.04em}
 .notice-preview{font-size:13px;color:var(--ink3);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* === JUICE: clock-in reaction === */
+#clock-btn-wrap{position:relative}
+@keyframes clockInBurst{0%{transform:scale(1)}20%{transform:scale(1.13)}50%{transform:scale(0.97)}75%{transform:scale(1.05)}100%{transform:scale(1)}}
+@keyframes clockOutSettle{0%{transform:scale(1)}30%{transform:scale(0.93)}70%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes clockRipple{from{transform:scale(1);opacity:0.65}to{transform:scale(2.5);opacity:0}}
+.clock-ripple{position:absolute;top:50%;left:50%;width:180px;height:180px;margin-top:-90px;margin-left:-90px;border-radius:50%;pointer-events:none;animation:clockRipple 0.7s ease-out forwards}
 /* === JUICE: nav icon bounce === */
 @keyframes navIconBounce{0%{transform:scale(1)}35%{transform:scale(1.32) translateY(-2px)}65%{transform:scale(0.92)}100%{transform:scale(1)}}
 nav button.active svg{animation:navIconBounce 0.32s ease-out}
@@ -389,7 +395,7 @@ nav button{transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),color 0.15s}
             <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
-        <div class="version-tag">BamnApp v2.5.7</div>
+        <div class="version-tag">BamnApp v2.5.9</div>
         <div style="text-align:center;padding-bottom:20px">
           <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
           <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -674,6 +680,7 @@ function fmtDayShort(ts){return new Intl.DateTimeFormat('en-GB',{timeZone:TZ,wee
 function getBDS(ts){return new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ts));}
 function toBerlinISO(ts){return new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts)).replace(' ','T');}
 function hrs(ms){return(ms/3600000).toFixed(2);}
+function countUp(el,ms,dur){const target=ms/3600000;const start=performance.now();(function step(now){const p=Math.min((now-start)/dur,1);const e=1-Math.pow(1-p,3);el.textContent=(target*e).toFixed(2);if(p<1)requestAnimationFrame(step);})(start);}
 
 function shiftMs(s){
   const i=s.correctedIn||s.clockedIn||s.manualIn;
@@ -748,6 +755,7 @@ function checkAutoClockOut(){
 // ── CLOCK BTN ──
 function handleClockBtn(){
   const open=getOpen();
+  const clockingIn=!open;
   if(open){
     clearInterval(durInt);
     document.getElementById('current-shift-info').textContent='';
@@ -758,6 +766,19 @@ function handleClockBtn(){
     setOpen({id:genId(),clockedIn:new Date().toISOString(),clockedOut:null,autoClockOut:false,flagged:false,manual:false,correctedIn:null,correctedOut:null,correctionReason:null,audit:[{action:'clock-in',at:new Date().toISOString()}]});
     showToast('Clocked in');
   }
+  // Burst animation
+  const btn=document.getElementById('clock-btn');
+  btn.style.animation='none';
+  btn.offsetHeight; // force reflow
+  btn.style.animation=clockingIn?'clockInBurst 0.55s ease-out forwards':'clockOutSettle 0.42s ease-out forwards';
+  setTimeout(()=>{btn.style.animation='';},650);
+  // Ripple ring
+  const wrap=document.getElementById('clock-btn-wrap');
+  const rpl=document.createElement('div');
+  rpl.className='clock-ripple';
+  rpl.style.border='2.5px solid '+(clockingIn?'var(--yolk)':'var(--ink3)');
+  wrap.appendChild(rpl);
+  setTimeout(()=>rpl.remove(),750);
   updateHomeUI();
 }
 
@@ -832,10 +853,10 @@ function updateHomeUI(){
   }
   const shifts=loadShifts(), todayStr=getBDS(now), openMs=open?now-new Date(open.clockedIn):0;
   function sumMs(f){return shifts.reduce((a,s)=>{const t=s.correctedIn||s.clockedIn||s.manualIn;if(!t)return a;const ts=new Date(t).getTime(),ds=getBDS(new Date(t));let ok=false;if(f==='today')ok=ds===todayStr;else if(f==='week'){const b=getWeekBounds();ok=ts>=b.start&&ts<b.end;}else if(f==='month'){const b=getMonthBounds();ok=ts>=b.start&&ts<b.end;}else ok=true;return a+(ok?shiftMs(s):0);},0);}
-  document.getElementById('stat-today').textContent=hrs(sumMs('today')+openMs);
-  document.getElementById('stat-week').textContent=hrs(sumMs('week')+openMs);
-  document.getElementById('stat-month').textContent=hrs(sumMs('month')+openMs);
-  document.getElementById('stat-all').textContent=hrs(sumMs('all')+openMs);
+  countUp(document.getElementById('stat-today'),sumMs('today')+openMs,550);
+  countUp(document.getElementById('stat-week'), sumMs('week')+openMs, 650);
+  countUp(document.getElementById('stat-month'),sumMs('month')+openMs,750);
+  countUp(document.getElementById('stat-all'),  sumMs('all')+openMs,  850);
   renderNextShift();renderProjectedHome();
   renderMenuAlertsHome();
   renderNoticesHome();
