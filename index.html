@@ -29,9 +29,9 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .card-label{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
 .card.warn{background:var(--warn-pale);border-color:#e8b8a8}.card.ok{background:var(--ok-pale);border-color:#b8d8c4}.card.accent{background:var(--yolk-pale);border-color:#e8d890}
 #clock-btn-wrap{padding:24px 0 8px;display:flex;justify-content:center}
-#clock-btn{width:180px;height:180px;border-radius:50%;border:3px solid var(--ink);background:var(--ink);color:var(--yolk-light);font-family:var(--serif);font-size:22px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:transform 0.12s,box-shadow 0.12s,background 0.2s,border-color 0.2s;box-shadow:0 4px 24px rgba(0,0,0,0.18);}
+#clock-btn{width:180px;height:180px;border-radius:50%;border:3px solid var(--ink);background:var(--ink);color:var(--yolk-light);font-family:var(--serif);font-size:22px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.2s,background 0.2s,border-color 0.2s;box-shadow:0 4px 24px rgba(0,0,0,0.18);}
 #clock-btn.clocked-in{background:var(--paper);color:var(--ink);border-color:var(--yolk)}
-#clock-btn svg{width:32px;height:32px;stroke-width:1.5}#clock-btn:active{transform:scale(0.95)}
+#clock-btn svg{width:32px;height:32px;stroke-width:1.5}#clock-btn:active{transform:scale(0.91);transition-duration:0.08s;transition-timing-function:ease-in}
 #clock-btn-label{font-size:13px;opacity:0.7;font-family:var(--sans);font-weight:300;letter-spacing:0.03em}
 #live-time{font-family:var(--sans);font-size:13px;font-weight:300;letter-spacing:0.04em;opacity:0.6;text-align:center;margin-bottom:4px}
 #current-shift-info{text-align:center;padding:8px 0 20px;font-size:14px;color:var(--ink3);min-height:28px}
@@ -192,6 +192,10 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
 .notice-title{font-size:15px;font-weight:500;color:var(--ink);margin-bottom:3px}
 .notice-meta{font-size:11px;color:var(--ink3);letter-spacing:0.04em}
 .notice-preview{font-size:13px;color:var(--ink3);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* === JUICE: compress → settle === */
+.btn-primary,.btn-secondary,.btn-small,.filter-btn,.cal-nav button,.more-nav-btn,.more-back-btn{transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),color 0.15s,background 0.12s,border-color 0.15s}
+nav button{transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),color 0.15s}
+.btn-primary:active,.btn-secondary:active,.btn-small:active,.filter-btn:active,.cal-nav button:active,.more-nav-btn:active,.more-back-btn:active,nav button:active{transform:scale(0.93);opacity:1;transition-duration:0.07s;transition-timing-function:ease-in}
 </style>
 </head>
 <body>
@@ -381,7 +385,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
             <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
-        <div class="version-tag">BamnApp v2.5.2</div>
+        <div class="version-tag">BamnApp v2.5.3</div>
         <div style="text-align:center;padding-bottom:20px">
           <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
           <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
