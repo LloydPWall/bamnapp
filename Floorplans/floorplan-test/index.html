@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Floorplan Test</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    #floorplan {
+      margin-top: 20px;
+    }
+
+    #info {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    button {
+      font-size: 16px;
+      padding: 8px 12px;
+      margin-right: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Floorplan Test</h1>
+
+  <button id="clearSelection">Clear Selection</button>
+  <button id="toggleHitboxes">Show Hitboxes</button>
+
+  <div id="floorplan"></div>
+
+  <div id="info">Click a table.</div>
+
+  <script>
+    let hitboxesVisible = false;
+    let selectedTable = null;
+
+    async function loadFloorplan() {
+      const response = await fetch("floorplan.svg");
+      const svgText = await response.text();
+
+      document.getElementById("floorplan").innerHTML = svgText;
+
+      const svg = document.querySelector("#floorplan svg");
+
+      const tables = svg.querySelectorAll('[id^="T"]');
+
+      console.log("Tables found:", tables.length);
+
+      tables.forEach(table => {
+        // Make table objects invisible but clickable
+        table.style.fill = "transparent";
+        table.style.stroke = "transparent";
+        table.style.strokeWidth = "0";
+        table.style.pointerEvents = "all";
+        table.style.cursor = "pointer";
+
+        table.addEventListener("mouseenter", () => {
+          if (table !== selectedTable) {
+            table.style.stroke = "orange";
+            table.style.strokeWidth = "3";
+          }
+        });
+
+        table.addEventListener("mouseleave", () => {
+          if (table !== selectedTable) {
+            if (hitboxesVisible) {
+              table.style.stroke = "red";
+              table.style.strokeWidth = "2";
+            } else {
+              table.style.stroke = "transparent";
+              table.style.strokeWidth = "0";
+            }
+          }
+        });
+
+        table.addEventListener("click", () => {
+          // Reset previous selected table
+          if (selectedTable && selectedTable !== table) {
+            if (hitboxesVisible) {
+              selectedTable.style.stroke = "red";
+              selectedTable.style.strokeWidth = "2";
+            } else {
+              selectedTable.style.stroke = "transparent";
+              selectedTable.style.strokeWidth = "0";
+            }
+          }
+
+          selectedTable = table;
+
+          // Highlight selected table
+          table.style.stroke = "blue";
+          table.style.strokeWidth = "4";
+
+          document.getElementById("info").textContent =
+            "Selected: " + table.id;
+        });
+      });
+
+      document.getElementById("clearSelection").addEventListener("click", () => {
+        if (selectedTable) {
+          if (hitboxesVisible) {
+            selectedTable.style.stroke = "red";
+            selectedTable.style.strokeWidth = "2";
+          } else {
+            selectedTable.style.stroke = "transparent";
+            selectedTable.style.strokeWidth = "0";
+          }
+        }
+
+        selectedTable = null;
+        document.getElementById("info").textContent = "Click a table.";
+      });
+
+      document.getElementById("toggleHitboxes").addEventListener("click", () => {
+        hitboxesVisible = !hitboxesVisible;
+
+        document.getElementById("toggleHitboxes").textContent =
+          hitboxesVisible ? "Hide Hitboxes" : "Show Hitboxes";
+
+        tables.forEach(table => {
+          if (table === selectedTable) {
+            table.style.stroke = "blue";
+            table.style.strokeWidth = "4";
+          } else if (hitboxesVisible) {
+            table.style.stroke = "red";
+            table.style.strokeWidth = "2";
+          } else {
+            table.style.stroke = "transparent";
+            table.style.strokeWidth = "0";
+          }
+        });
+      });
+    }
+
+    loadFloorplan();
+  </script>
+</body>
+</html>

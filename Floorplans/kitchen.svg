@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 745 500" role="img" aria-label="Kitchen and dining floor plan">
+  <defs>
+    <style>
+      .floor { fill: #f0ead8; }
+      .wall  { fill: none; stroke: #1a1a1a; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+      .bar   { fill: #d4a017; }
+      .stool { fill: #c88a08; stroke: #1a1a1a; stroke-width: 1.5; }
+      .tbl   { fill: #3d2b1a; }
+      .tbl-oval { fill: #3d2b1a; }
+      .t    { fill: #f5f0e8; font-family: 'DM Sans', system-ui, sans-serif; font-size: 13px; font-weight: 500; text-anchor: middle; dominant-baseline: central; }
+      .t-sm { fill: #f5f0e8; font-family: 'DM Sans', system-ui, sans-serif; font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; letter-spacing: 0.05em; }
+      .lbl  { fill: #9b8c7a; font-family: 'DM Sans', system-ui, sans-serif; font-size: 8.5px; font-weight: 600; letter-spacing: 0.1em; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <!-- ── FLOOR ── -->
+  <!-- Shape: left wing (tall) + step + right wing (lower, wider) + entrance arch -->
+  <path class="floor" d="M 15,15 L 262,15 L 262,195 L 730,195 L 730,472 L 375,472 A 48,48 0 0,1 292,472 L 292,350 L 15,350 Z"/>
+  <path class="wall"  d="M 15,15 L 262,15 L 262,195 L 730,195 L 730,472 L 375,472 A 48,48 0 0,1 292,472 L 292,350 L 15,350 Z"/>
+
+  <!-- ── BAR ── -->
+  <rect class="bar" x="262" y="168" width="197" height="42" rx="5"/>
+  <!-- Stool circles sit on top edge of bar -->
+  <circle class="stool" cx="308" cy="178" r="14"/>
+  <text class="t-sm" x="308" y="179">L</text>
+  <circle class="stool" cx="361" cy="178" r="14"/>
+  <text class="t-sm" x="361" y="179">M</text>
+  <circle class="stool" cx="414" cy="178" r="14"/>
+  <text class="t-sm" x="414" y="179">R</text>
+  <text class="lbl" x="362" y="200">BAR</text>
+
+  <!-- ── LEFT WING TABLES ── -->
+
+  <!-- 18 — tall banquette, left wall -->
+  <rect class="tbl" x="24" y="96" width="60" height="76" rx="6"/>
+  <text class="t" x="54" y="135">18</text>
+
+  <!-- 17 — tall, left wall, below 18 -->
+  <rect class="tbl" x="24" y="192" width="60" height="96" rx="6"/>
+  <text class="t" x="54" y="241">17</text>
+
+  <!-- 16, 14 — top row, side by side -->
+  <rect class="tbl" x="92"  y="26" width="50" height="62" rx="6"/>
+  <text class="t" x="117" y="57">16</text>
+  <rect class="tbl" x="149" y="26" width="50" height="62" rx="6"/>
+  <text class="t" x="174" y="57">14</text>
+
+  <!-- 12 — top row, far right of left wing -->
+  <rect class="tbl" x="205" y="26" width="47" height="62" rx="6"/>
+  <text class="t" x="228" y="57">12</text>
+
+  <!-- 15, 13, 11 — bottom row -->
+  <rect class="tbl" x="62"  y="262" width="52" height="60" rx="6"/>
+  <text class="t" x="88"  y="293">15</text>
+  <rect class="tbl" x="124" y="262" width="52" height="60" rx="6"/>
+  <text class="t" x="150" y="293">13</text>
+  <rect class="tbl" x="186" y="262" width="52" height="60" rx="6"/>
+  <text class="t" x="212" y="293">11</text>
+
+  <!-- ── RIGHT WING TABLES ── -->
+
+  <!-- 9, 8, 7, 6 — top row -->
+  <rect class="tbl" x="380" y="210" width="47" height="68" rx="6"/>
+  <text class="t" x="403" y="245">9</text>
+  <rect class="tbl" x="436" y="210" width="48" height="68" rx="6"/>
+  <text class="t" x="460" y="245">8</text>
+  <rect class="tbl" x="493" y="210" width="48" height="68" rx="6"/>
+  <text class="t" x="517" y="245">7</text>
+  <rect class="tbl" x="550" y="210" width="48" height="68" rx="6"/>
+  <text class="t" x="574" y="245">6</text>
+
+  <!-- 5, 4 — stacked, left side of right wing -->
+  <rect class="tbl" x="380" y="298" width="46" height="57" rx="6"/>
+  <text class="t" x="403" y="327">5</text>
+  <rect class="tbl" x="380" y="364" width="46" height="57" rx="6"/>
+  <text class="t" x="403" y="393">4</text>
+
+  <!-- 3, 2, 1 — bottom row -->
+  <rect class="tbl" x="448" y="367" width="57" height="62" rx="6"/>
+  <text class="t" x="476" y="399">3</text>
+  <rect class="tbl" x="514" y="367" width="57" height="62" rx="6"/>
+  <text class="t" x="542" y="399">2</text>
+  <rect class="tbl" x="578" y="367" width="57" height="62" rx="6"/>
+  <text class="t" x="606" y="399">1</text>
+
+  <!-- 10 — oval entrance table -->
+  <ellipse class="tbl-oval" cx="333" cy="418" rx="44" ry="32"/>
+  <text class="t" x="333" y="419">10</text>
+
+  <!-- ── ZONE LABELS ── -->
+  <text class="lbl" x="138" y="9">DINING — LEFT</text>
+  <text class="lbl" x="535" y="188">DINING — RIGHT</text>
+  <text class="lbl" x="333" y="480">ENTRANCE</text>
+</svg>

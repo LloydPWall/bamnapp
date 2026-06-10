@@ -1,4 +1,4 @@
-const CACHE = 'bamnapp-v44';
+const CACHE = 'bamnapp-v46';
 const ASSETS = ['./index.html', './manifest.json', './Kitchen%20Tables.png', './Terrace%20Tables.png'];
 
 self.addEventListener('install', e => {
@@ -22,7 +22,12 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+
+  // Never intercept API calls or cross-origin requests — always go to network
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+
   if (url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
+    // Network-first for HTML — always get latest, fall back to cache offline
     e.respondWith(
       fetch(e.request)
         .then(res => {
@@ -33,6 +38,7 @@ self.addEventListener('fetch', e => {
         .catch(() => caches.match(e.request))
     );
   } else {
+    // Cache-first for static assets (images, manifest, sw itself)
     e.respondWith(
       caches.match(e.request).then(cached => cached || fetch(e.request))
     );

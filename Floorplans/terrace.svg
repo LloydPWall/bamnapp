@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 570" role="img" aria-label="Terrace floor plan">
+  <defs>
+    <style>
+      .floor  { fill: #f0ead8; stroke: #1a1a1a; stroke-width: 2.5; stroke-linejoin: round; }
+      .wall-block { fill: #e2dcd2; stroke: #1a1a1a; stroke-width: 2; stroke-linejoin: round; }
+      .booth  { fill: #d4a017; }
+      .tbl    { fill: #3d2b1a; }
+      .t      { fill: #f5f0e8; font-family: 'DM Sans', system-ui, sans-serif; font-size: 13px; font-weight: 500; text-anchor: middle; dominant-baseline: central; }
+      .t-gold { fill: #1a1a1a; font-family: 'DM Sans', system-ui, sans-serif; font-size: 12px; font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+      .t-gold-hd { fill: #1a1a1a; font-family: 'DM Sans', system-ui, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-anchor: middle; }
+      .lbl    { fill: #9b8c7a; font-family: 'DM Sans', system-ui, sans-serif; font-size: 8.5px; font-weight: 600; letter-spacing: 0.1em; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <!-- ── FLOOR ── -->
+  <rect class="floor" x="15" y="15" width="630" height="540"/>
+
+  <!-- ── LEFT WALL STRUCTURAL INDENTS ── -->
+  <!-- Upper column/doorway protrusion -->
+  <rect class="wall-block" x="15" y="172" width="70" height="130"/>
+  <!-- Lower step/column -->
+  <rect class="wall-block" x="15" y="322" width="70" height="148"/>
+
+  <!-- ── BOOTHS (gold) ── -->
+
+  <!-- 300 BACK -->
+  <rect class="booth" x="110" y="28"  width="210" height="74" rx="6"/>
+  <text class="t-gold-hd" x="215" y="44">300 BACK</text>
+  <text class="t-gold" x="150" y="67">1</text>
+  <text class="t-gold" x="290" y="67">2</text>
+
+  <!-- 300 FRONT -->
+  <rect class="booth" x="110" y="114" width="210" height="74" rx="6"/>
+  <text class="t-gold-hd" x="215" y="130">300 FRONT</text>
+  <text class="t-gold" x="150" y="153">1</text>
+  <text class="t-gold" x="290" y="153">2</text>
+
+  <!-- ── RIGHT COLUMN: 310, 311, 312 ── -->
+  <rect class="tbl" x="438" y="28"  width="80" height="90" rx="6"/>
+  <text class="t" x="478" y="74">312</text>
+  <rect class="tbl" x="438" y="128" width="80" height="78" rx="6"/>
+  <text class="t" x="478" y="168">311</text>
+  <rect class="tbl" x="438" y="216" width="80" height="82" rx="6"/>
+  <text class="t" x="478" y="258">310</text>
+
+  <!-- ── MIDDLE ROW: 313, 314, 315 ── -->
+  <rect class="tbl" x="120" y="237" width="73" height="86" rx="6"/>
+  <text class="t" x="156" y="281">313</text>
+  <rect class="tbl" x="202" y="237" width="72" height="86" rx="6"/>
+  <text class="t" x="238" y="281">314</text>
+  <rect class="tbl" x="283" y="237" width="72" height="86" rx="6"/>
+  <text class="t" x="319" y="281">315</text>
+
+  <!-- ── RIGHT COLUMN: 307, 308, 309 ── -->
+  <rect class="tbl" x="438" y="322" width="80" height="56" rx="6"/>
+  <text class="t" x="478" y="351">309</text>
+  <rect class="tbl" x="438" y="386" width="80" height="56" rx="6"/>
+  <text class="t" x="478" y="415">308</text>
+  <rect class="tbl" x="438" y="450" width="80" height="56" rx="6"/>
+  <text class="t" x="478" y="479">307</text>
+
+  <!-- ── LOWER ROW: 316, 317, 318 ── -->
+  <rect class="tbl" x="120" y="333" width="73" height="84" rx="6"/>
+  <text class="t" x="156" y="376">316</text>
+  <rect class="tbl" x="202" y="333" width="72" height="84" rx="6"/>
+  <text class="t" x="238" y="376">317</text>
+  <rect class="tbl" x="283" y="333" width="72" height="84" rx="6"/>
+  <text class="t" x="319" y="376">318</text>
+
+  <!-- ── BOTTOM ROW: 301–306 ── -->
+  <rect class="tbl" x="52"  y="450" width="68" height="88" rx="6"/>
+  <text class="t" x="86"  y="495">301</text>
+  <rect class="tbl" x="130" y="450" width="68" height="88" rx="6"/>
+  <text class="t" x="164" y="495">302</text>
+  <rect class="tbl" x="207" y="450" width="68" height="88" rx="6"/>
+  <text class="t" x="241" y="495">303</text>
+  <rect class="tbl" x="300" y="450" width="68" height="88" rx="6"/>
+  <text class="t" x="334" y="495">304</text>
+  <rect class="tbl" x="377" y="450" width="68" height="88" rx="6"/>
+  <text class="t" x="411" y="495">305</text>
+  <!-- 306 tucked before right column -->
+  <rect class="tbl" x="438" y="516" width="80" height="24" rx="4"/>
+  <text class="t" x="478" y="529">306</text>
+
+  <!-- ── ZONE LABELS ── -->
+  <text class="lbl" x="215" y="9">TERRACE — BOOTHS</text>
+  <text class="lbl" x="215" y="230">MID SECTION</text>
+  <text class="lbl" x="86"  y="444">BOTTOM ROW</text>
+</svg>

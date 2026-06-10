@@ -380,7 +380,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
             <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
-        <div class="version-tag">BamnApp v2.6.1</div>
+        <div class="version-tag">BamnApp v2.7.0</div>
         <div style="text-align:center;padding-bottom:20px">
           <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
           <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -648,13 +648,12 @@ function mkAvatar(name,size){
   return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="border-radius:4px;flex-shrink:0"><rect width="40" height="40" fill="'+color+'"/><rect x="3" y="3" width="34" height="34" fill="white" opacity="0.08"/><text x="20" y="27" font-family="monospace" font-size="15" font-weight="bold" fill="white" text-anchor="middle">'+ini+'</text></svg>';
 }
 const RESV_KEY='bamnapp_resv', TIPS_KEY='bamnapp_tips', NOTICES_KEY='bamnapp_notices', WEATHER_KEY='bamnapp_weather', READS_KEY='bamnapp_notice_reads', MENU_KEY='bamnapp_menu_alerts', SPECS_KEY='bamnapp_specs';
-const SECRET='1300';
-const SPECS_PROXY='https://script.google.com/macros/s/AKfycbzA4BtxWD8oHeN_sBtFpcD5MJaWt6T-GtTPx9Yeq1Qu61_5JzM08p7hDEt11J2oqh9x/exec';
-const MENU_PROXY='https://script.google.com/macros/s/AKfycbxHZ6UrJ7067HHTq8YPTsznUnlqxedM5Yu0-nrC2ybkTfztr6d6P01mUrBV75Hk7ACI/exec';
-const NOTICES_PROXY='https://script.google.com/macros/s/AKfycbyVxgJlrECg36AgwBOUbDmI-57QUL2pL6UvvqYsMF0z8vyy0ttXABp3fgzGpOR7veM/exec';
-const SCHED_PROXY='https://script.google.com/macros/s/AKfycbyMvvtuvtrgFdWnaLc3wbgZtUvIovCLkvc24ie9bAWx1Y4lgc0a-6jUOK36r1nfMqocyA/exec';
-const RESV_PROXY='https://script.google.com/macros/s/AKfycbw_yIxztN2eUTNDnCZKHqHME2Hwcdp9FzTxYEjY5pTxoPw7Lyy4OTg6OrgYjmqbl8MS/exec';
-const TIPS_PROXY='https://script.google.com/macros/s/AKfycbzYt6WZwdXtvM0Hz4YL1vTEHPniei9dvfthEVxFHebybNc_NrzxhZmPyrzI4SKUKpikKQ/exec';
+const SPECS_PROXY='/api/specs';
+const MENU_PROXY='/api/menu';
+const NOTICES_PROXY='/api/notices';
+const SCHED_PROXY='/api/schedule';
+const RESV_PROXY='/api/reservations';
+const TIPS_PROXY='/api/tips';
 
 // ── TIME UTILS ──
 function fmtDT(ts){if(!ts)return'—';return new Intl.DateTimeFormat('en-GB',{timeZone:TZ,day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts)).replace(',','');}
@@ -708,12 +707,9 @@ function genId(){return Date.now().toString(36)+Math.random().toString(36).slice
 
 // ── PROXY FETCH ──
 async function proxyFetch(url){
-  // Apps Script requires a simple fetch with no extra headers to avoid CORS preflight
-  const r=await fetch(url+'?key='+SECRET);
+  const r=await fetch(url);
   if(!r.ok) throw new Error('HTTP '+r.status);
-  const text=await r.text();
-  if(text.trim()==='Unauthorised') throw new Error('Unauthorised');
-  return text;
+  return await r.text();
 }
 
 // ── PRUNE ──
@@ -1139,10 +1135,8 @@ function init(){
       if(e.data&&e.data.type==='SW_UPDATED') window.location.reload();
     });
   }
-  refreshNotices();
-  fetchWeather();
-  fetchMenuAlerts();
-  refreshSpecs();
+  silentRefresh();  // auto-fetch fresh data on every open
+  initSSE();        // real-time updates while app is open
   setInterval(updateHomeUI,60000);
 }
 // ── CSV RESTORE ──
@@ -1254,6 +1248,34 @@ async function globalRefresh(){
   btn.style.opacity='';btn.style.pointerEvents='';
   updateHomeUI();
   showToast('All data refreshed');
+}
+
+// Silent background refresh — no toast, called on app open and via SSE
+function silentRefresh(){
+  Promise.allSettled([
+    refreshSchedule(),refreshReservations(),refreshTips(),
+    refreshNotices(),fetchWeather(),fetchMenuAlerts(),refreshSpecs()
+  ]).then(()=>updateHomeUI());
+}
+
+// SSE — real-time updates pushed from server
+function initSSE(){
+  if(!window.EventSource)return;
+  const handlers={
+    schedule:refreshSchedule,reservations:refreshReservations,
+    tips:refreshTips,notices:refreshNotices,
+    menu:fetchMenuAlerts,specs:refreshSpecs,weather:fetchWeather
+  };
+  const sse=new EventSource('/api/events');
+  sse.onmessage=function(e){
+    try{
+      const d=JSON.parse(e.data);
+      if(d.type==='updated'&&handlers[d.channel]){
+        handlers[d.channel]();
+      }
+    }catch{}
+  };
+  // EventSource reconnects automatically on error/disconnect
 }
 
 // ── NOTICES ──
@@ -1454,8 +1476,7 @@ function saveWeather(d){localStorage.setItem(WEATHER_KEY,JSON.stringify(d))}
 
 async function fetchWeather(){
   try{
-    const url='https://api.open-meteo.com/v1/forecast?latitude=52.499&longitude=13.404&daily=weather_code,temperature_2m_max&timezone=Europe%2FBerlin&forecast_days=14';
-    const r=await fetch(url);
+    const r=await fetch('/api/weather');
     if(!r.ok)throw new Error('HTTP '+r.status);
     const data=await r.json();
     const days={};
@@ -1828,32 +1849,20 @@ function openDayModal(ds){
     });
   }
   if(!html)html='<p style="color:var(--ink3);font-size:14px">No shifts scheduled this day.</p>';
-  // Add bookings info — cross-referenced with user's shift times if available
-  const resv=loadResv().filter(r=>r.date===ds);
+  // Bookings — always show full list sorted by time
+  const resv=loadResv().filter(r=>r.date===ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   if(resv.length){
-    const userShift=myShifts[0];
-    let bookingHtml='';
-    if(userShift){
-      // Cross-reference: count bookings where time falls within user's scheduled shift
-      const shiftStart=fmtT(userShift.start),shiftEnd=fmtT(userShift.end);
-      const during=resv.filter(r=>{
-        if(!r.time)return true; // no time = include
-        return r.time>=shiftStart&&r.time<=shiftEnd;
-      });
-      const totalGuests=during.reduce((a,r)=>a+(parseInt(r.guests)||0),0);
-      bookingHtml=`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--paper3)">
-        <div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Bookings during your shift</div>
-        <div style="font-size:14px;color:var(--ink)">${during.length} reservation${during.length!==1?'s':''} · ${totalGuests} guest${totalGuests!==1?'s':''}</div>
-        ${during.map(r=>`<div style="font-size:12px;color:var(--ink3);margin-top:4px">${r.time?r.time+' · ':''}${r.name}${r.guests?' ('+r.guests+')':''}</div>`).join('')}
-      </div>`;
-    } else {
-      const total=resv.length,guests=resv.reduce((a,r)=>a+(parseInt(r.guests)||0),0);
-      bookingHtml=`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--paper3)">
-        <div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Bookings this day</div>
-        <div style="font-size:14px;color:var(--ink)">${total} reservation${total!==1?'s':''} · ${guests} guest${guests!==1?'s':''}</div>
-      </div>`;
-    }
-    html+=bookingHtml;
+    const totalGuests=resv.reduce((a,r)=>a+(parseInt(r.guests)||0),0);
+    const rows=resv.map(r=>{
+      const namePart=`<span style="font-size:13px;font-weight:500;color:var(--ink)">${r.name}</span>${r.guests?` <span style="font-size:12px;color:var(--ink3)">(${r.guests})</span>`:''}`;
+      const timePart=r.time?`<span style="font-size:12px;color:var(--ink3);white-space:nowrap;margin-left:auto;padding-left:8px">${r.time}</span>`:'';
+      const notesPart=r.notes?`<div style="font-size:11px;color:var(--ink3);font-style:italic;margin-top:1px">${r.notes}</div>`:'';
+      return`<div style="padding:6px 0;border-bottom:1px solid var(--paper3)"><div style="display:flex;align-items:baseline">${namePart}${timePart}</div>${notesPart}</div>`;
+    }).join('');
+    html+=`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--paper3)">
+      <div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Bookings · ${resv.length} reservation${resv.length!==1?'s':''} · ${totalGuests} guest${totalGuests!==1?'s':''}</div>
+      ${rows}
+    </div>`;
   }
   document.getElementById('modal-day-content').innerHTML=html;
   openModal('modal-day');
