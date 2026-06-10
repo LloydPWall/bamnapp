@@ -380,7 +380,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
             <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
-        <div class="version-tag">BamnApp v2.6.0</div>
+        <div class="version-tag">BamnApp v2.6.1</div>
         <div style="text-align:center;padding-bottom:20px">
           <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
           <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -1863,7 +1863,6 @@ function openDayModal(ds){
 function loadResv(){try{return JSON.parse(localStorage.getItem(RESV_KEY)||'[]')}catch{return[]}}
 function saveResv(d){localStorage.setItem(RESV_KEY,JSON.stringify(d))}
 async function refreshReservations(){
-  document.getElementById('resv-status-label').textContent='Loading…';
   try{
     const text=await proxyFetch(RESV_PROXY);
     const parsed=parseResvCSV(text);
@@ -1871,7 +1870,6 @@ async function refreshReservations(){
     renderReservationsScreen();
     showToast(`Bookings refreshed — ${parsed.length} reservation${parsed.length!==1?'s':''} loaded`);
   }catch(e){
-    document.getElementById('resv-status-label').textContent='Could not load — check connection';
     showToast('Failed to fetch bookings');
   }
 }
