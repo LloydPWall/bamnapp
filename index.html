@@ -380,7 +380,7 @@ nav button.active{color:var(--yolk-light)}nav button:active{opacity:0.7}
             <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
-        <div class="version-tag">BamnApp v2.5.2</div>
+        <div class="version-tag">BamnApp v2.6.0</div>
         <div style="text-align:center;padding-bottom:20px">
           <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
           <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -1751,6 +1751,9 @@ function renderCalendar(){
   if(name) sched.filter(s=>s.employee.toLowerCase()===name).forEach(s=>myDays.add(getBDS(new Date(s.start))));
   const todayStr=getBDS(now);
   const weather=loadWeather();
+  // Pre-build reservation map (avoid calling loadResv() per cell)
+  const resvByDay={};
+  loadResv().forEach(r=>{if(!resvByDay[r.date])resvByDay[r.date]=[];resvByDay[r.date].push(r);});
   const first=new Date(calYear,calMonth,1);
   const lastDay=new Date(calYear,calMonth+1,0).getDate();
   const startDow=(first.getDay()+6)%7;
@@ -1763,14 +1766,15 @@ function renderCalendar(){
     const isToday=ds===todayStr;
     const hasAny=!!allDays[ds];
     const isMe=myDays.has(ds);
-    // tappable if any shifts exist that day
-    const onclick=hasAny?`onclick="openDayModal('${ds}')"`:'';
-    // highlighted (yellow) only if it's the user's shift day; otherwise subtle dot for other-staff days
+    const resv=resvByDay[ds]||[];
+    const hasResv=resv.length>0;
+    // tappable if any shifts OR reservations exist that day
+    const isInteractive=hasAny||hasResv;
+    const onclick=isInteractive?`onclick="openDayModal('${ds}')"`:'';
     const wdata=weather&&weather.days?weather.days[ds]:null;
     const wbit=wdata?'<div class="weather-cell"><div class="weather-icon">'+wmoIcon(wdata.code,12).icon+'</div><div class="weather-temp">'+wdata.max+'°</div></div>':'';
-    const resv=loadResv().filter(r=>r.date===ds);
-    const resvDot=resv.length?'<span style="width:5px;height:5px;border-radius:50%;background:#2563EB;display:inline-block;margin-top:1px" title="'+resv.length+' booking'+( resv.length>1?'s':'')+'"></span>':'';
-    cells+=`<div class="cal-cell${isMe?' has-shift':''}${hasAny&&!isMe?' has-other':''}${isToday?' today':''}" ${onclick}>
+    const resvDot=hasResv?'<span style="width:5px;height:5px;border-radius:50%;background:#2563EB;display:inline-block;margin-top:1px" title="'+resv.length+' booking'+(resv.length>1?'s':'')+'"></span>':'';
+    cells+=`<div class="cal-cell${isMe?' has-shift':''}${isInteractive&&!isMe?' has-other':''}${isToday?' today':''}" ${onclick}>
       <span class="cal-num">${d}</span>
       <div style="display:flex;gap:2px;align-items:center;justify-content:center">
         ${isMe?'<span class="cal-dot"></span>':hasAny?'<span class="cal-dot" style="background:var(--ink3);opacity:0.35"></span>':''}
