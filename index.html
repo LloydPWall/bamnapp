@@ -385,7 +385,7 @@ textarea.booking-input{resize:none;min-height:72px}
             <svg class="more-nav-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
-        <div class="version-tag">BamnApp v2.8.0</div>
+        <div class="version-tag">BamnApp v2.8.2</div>
         <div style="text-align:center;padding-bottom:20px">
           <p style="font-size:12px;color:var(--ink3)">Designed by <strong style="font-weight:500;color:var(--ink2)">Lloyd Wall</strong></p>
           <p style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6">© 2026 Lloyd Wall. All rights reserved.<br>Authorised use only. Unauthorised use prohibited.</p>
@@ -667,6 +667,7 @@ textarea.booking-input{resize:none;min-height:72px}
 </div>
 
 <script>
+const APP_VERSION='2.8.2';
 const TZ='Europe/Berlin';
 const STORAGE_KEY='bamnapp_shifts', OPEN_KEY='bamnapp_open', ONBOARD_KEY='bamnapp_onboarded', NAME_KEY='bamnapp_name', SCHED_KEY='bamnapp_schedule';
 const RC={Owner:'#8B6914',Manager:'#7C3AED',Kitchen:'#16A34A',Bar:'#2563EB',Service:'#D4A017',KP:'#EA580C'};
@@ -698,7 +699,7 @@ function mkAvatar(name,size){
   const ini=(disp||'?').slice(0,2).toUpperCase();
   return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="border-radius:4px;flex-shrink:0"><rect width="40" height="40" fill="'+color+'"/><rect x="3" y="3" width="34" height="34" fill="white" opacity="0.08"/><text x="20" y="27" font-family="monospace" font-size="15" font-weight="bold" fill="white" text-anchor="middle">'+ini+'</text></svg>';
 }
-const RESV_KEY='bamnapp_resv', TIPS_KEY='bamnapp_tips', NOTICES_KEY='bamnapp_notices', WEATHER_KEY='bamnapp_weather', READS_KEY='bamnapp_notice_reads', MENU_KEY='bamnapp_menu_alerts', SPECS_KEY='bamnapp_specs';
+const RESV_KEY='bamnapp_resv', LOCAL_BOOKINGS_KEY='bamnapp_local_bookings', TIPS_KEY='bamnapp_tips', NOTICES_KEY='bamnapp_notices', WEATHER_KEY='bamnapp_weather', READS_KEY='bamnapp_notice_reads', MENU_KEY='bamnapp_menu_alerts', SPECS_KEY='bamnapp_specs';
 const SPECS_PROXY='/api/specs';
 const MENU_PROXY='/api/menu';
 const NOTICES_PROXY='/api/notices';
@@ -1186,6 +1187,7 @@ function init(){
       if(e.data&&e.data.type==='SW_UPDATED') window.location.reload();
     });
   }
+  checkVersion();   // self-heal stale caches — unregisters SW + reloads if version mismatch
   silentRefresh();  // auto-fetch fresh data on every open
   initSSE();        // real-time updates while app is open
   setInterval(updateHomeUI,60000);
@@ -1296,6 +1298,23 @@ async function globalRefresh(){
   ]);
   updateHomeUI();
   showToast('All data refreshed');
+}
+
+// Version check — fetches /api/version and if it doesn't match APP_VERSION,
+// unregisters the service worker and hard-reloads to flush any stale cache.
+async function checkVersion(){
+  try{
+    const res=await fetch('/api/version?t='+Date.now());
+    if(!res.ok)return;
+    const{version}=await res.json();
+    if(version===APP_VERSION)return;
+    console.log(`[version] server=${version} client=${APP_VERSION} — reloading`);
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+    window.location.reload();
+  }catch{}
 }
 
 // Silent background refresh — no toast, called on app open and via SSE
@@ -1897,15 +1916,26 @@ function openDayModal(ds){
     });
   }
   if(!html)html='<p style="color:var(--ink3);font-size:14px">No shifts scheduled this day.</p>';
-  // Bookings — always show full list sorted by time
+  // Bookings — merge Google Sheets + local, sorted by time
   const resv=loadResv().filter(r=>r.date===ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  // Build a lookup map of local bookings keyed by id for edit/delete controls
+  const localByKey={};
+  loadLocalBookings().filter(r=>r.date===ds).forEach(r=>{
+    const key=`${r.date}|${r.time}|${r.name}`;
+    localByKey[key]=r.id;
+  });
   if(resv.length){
     const totalGuests=resv.reduce((a,r)=>a+(parseInt(r.guests)||0),0);
     const rows=resv.map(r=>{
+      const localId=localByKey[`${r.date}|${r.time}|${r.name}`]||null;
       const namePart=`<span style="font-size:13px;font-weight:500;color:var(--ink)">${r.name}</span>${r.guests?` <span style="font-size:12px;color:var(--ink3)">(${r.guests})</span>`:''}`;
       const timePart=r.time?`<span style="font-size:12px;color:var(--ink3);white-space:nowrap;margin-left:auto;padding-left:8px">${r.time}</span>`:'';
       const notesPart=r.notes?`<div style="font-size:11px;color:var(--ink3);font-style:italic;margin-top:1px">${r.notes}</div>`:'';
-      return`<div style="padding:6px 0;border-bottom:1px solid var(--paper3)"><div style="display:flex;align-items:baseline">${namePart}${timePart}</div>${notesPart}</div>`;
+      const actionBtns=localId?`<span style="display:inline-flex;gap:6px;margin-left:8px">
+        <button onclick="event.stopPropagation();closeModal('modal-day');editBooking('${localId}')" style="background:none;border:none;padding:2px;cursor:pointer;color:var(--ink3);line-height:1" title="Edit"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button onclick="event.stopPropagation();deleteBooking('${localId}')" style="background:none;border:none;padding:2px;cursor:pointer;color:var(--warn);line-height:1" title="Delete"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button>
+      </span>`:'';
+      return`<div style="padding:6px 0;border-bottom:1px solid var(--paper3)"><div style="display:flex;align-items:center">${namePart}${actionBtns}${timePart}</div>${notesPart}</div>`;
     }).join('');
     html+=`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--paper3)">
       <div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Bookings · ${resv.length} reservation${resv.length!==1?'s':''} · ${totalGuests} guest${totalGuests!==1?'s':''}</div>
@@ -1923,16 +1953,21 @@ function openDayModal(ds){
 // ── RESERVATIONS ──
 function loadResv(){try{return JSON.parse(localStorage.getItem(RESV_KEY)||'[]')}catch{return[]}}
 function saveResv(d){localStorage.setItem(RESV_KEY,JSON.stringify(d))}
+function loadLocalBookings(){try{return JSON.parse(localStorage.getItem(LOCAL_BOOKINGS_KEY)||'[]')}catch{return[]}}
+function saveLocalBookings(d){localStorage.setItem(LOCAL_BOOKINGS_KEY,JSON.stringify(d))}
 async function refreshReservations(){
+  // Fetch Google Sheets reservations (merged CSV)
   try{
     const text=await proxyFetch(RESV_PROXY);
     const parsed=parseResvCSV(text);
     saveResv(parsed);
-    renderReservationsScreen();
-    showToast(`Bookings refreshed — ${parsed.length} reservation${parsed.length!==1?'s':''} loaded`);
-  }catch(e){
-    showToast('Failed to fetch bookings');
-  }
+  }catch(e){}
+  // Fetch locally-added bookings (JSON with IDs, for edit/delete)
+  try{
+    const res=await fetch('/api/bookings');
+    if(res.ok)saveLocalBookings(await res.json());
+  }catch(e){}
+  renderReservationsScreen();
 }
 function parseResvCSV(text){
   const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
@@ -2018,30 +2053,62 @@ function openResvDayModal(ds){
   openModal('modal-resv-day');
 }
 
-// ── ADD BOOKING FORM ──────────────────────────────────────────────────────────
+// ── ADD / EDIT BOOKING FORM ───────────────────────────────────────────────────
 const BOOKING_TIMES=['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00'];
-let _bGuests=2, _bTime=null;
+let _bGuests=2, _bTime=null, _editBookingId=null;
 
-function openAddBookingModal(ds){
-  _bGuests=2; _bTime=null;
-  const dateVal=ds||getBDS(new Date());
+function openAddBookingModal(ds, existing){
+  _editBookingId = existing ? existing.id : null;
+  _bGuests = existing ? (parseInt(existing.guests)||2) : 2;
+  _bTime = null;
+  const dateVal = existing ? existing.date : (ds||getBDS(new Date()));
   document.getElementById('booking-date').value=dateVal;
-  document.getElementById('booking-name').value='';
-  document.getElementById('booking-contact').value='';
-  document.getElementById('booking-notes').value='';
-  document.getElementById('booking-guests-display').textContent='2';
+  document.getElementById('booking-name').value=existing?existing.name:'';
+  document.getElementById('booking-contact').value=existing?(existing.contact||''):'';
+  document.getElementById('booking-notes').value=existing?(existing.notes||''):'';
+  document.getElementById('booking-guests-display').textContent=_bGuests;
   document.getElementById('booking-time-custom').style.display='none';
   document.getElementById('booking-time-custom').value='';
+  // Modal title
+  document.querySelector('#modal-add-booking .modal-title').textContent=existing?'Edit Booking':'Add Booking';
   // Render time chips
   document.getElementById('booking-time-chips').innerHTML=
     BOOKING_TIMES.map(t=>`<button class="time-chip" data-t="${t}" onclick="selectBookingTime('${t}')">${t}</button>`).join('')+
     `<button class="time-chip" data-t="custom" onclick="selectBookingTime('custom')">Other…</button>`;
-  // Reset submit button
+  // Pre-select time chip if editing
+  if(existing&&existing.time){
+    if(BOOKING_TIMES.includes(existing.time)){
+      selectBookingTime(existing.time);
+    } else {
+      selectBookingTime('custom');
+      document.getElementById('booking-time-custom').value=existing.time;
+    }
+  }
+  // Submit button label
   const btn=document.getElementById('booking-submit-btn');
-  btn.disabled=false; btn.textContent='Add Booking';
+  btn.disabled=false; btn.textContent=existing?'Save Changes':'Add Booking';
   openModal('modal-add-booking');
-  // Focus name after slide-up animation
   setTimeout(()=>document.getElementById('booking-name').focus(),320);
+}
+
+function editBooking(id){
+  const booking=loadLocalBookings().find(b=>b.id===id);
+  if(!booking){showToast('Booking not found');return;}
+  openAddBookingModal(null, booking);
+}
+
+async function deleteBooking(id){
+  if(!confirm('Delete this booking?'))return;
+  const wasDate=(loadLocalBookings().find(b=>b.id===id)||{}).date;
+  try{
+    const res=await fetch(`/api/bookings/${id}`,{method:'DELETE'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    showToast('Booking deleted');
+    await refreshReservations();
+    if(wasDate)openDayModal(wasDate);
+  }catch(e){
+    showToast('Could not delete — check connection');
+  }
 }
 
 function selectBookingTime(t){
@@ -2063,7 +2130,6 @@ function adjustGuests(delta){
   _bGuests=Math.max(1,Math.min(30,_bGuests+delta));
   const el=document.getElementById('booking-guests-display');
   el.textContent=_bGuests;
-  // Spring animation
   el.style.transform='scale(1.35)';
   setTimeout(()=>el.style.transform='',150);
 }
@@ -2081,18 +2147,27 @@ async function submitBooking(){
   const btn=document.getElementById('booking-submit-btn');
   btn.disabled=true; btn.textContent='Saving…';
   try{
-    const res=await fetch('/api/reservations',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({date,time,name,guests:_bGuests,contact,notes})
-    });
+    let res;
+    if(_editBookingId){
+      res=await fetch(`/api/bookings/${_editBookingId}`,{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({date,time,name,guests:_bGuests,contact,notes})
+      });
+    } else {
+      res=await fetch('/api/reservations',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({date,time,name,guests:_bGuests,contact,notes})
+      });
+    }
     if(!res.ok)throw new Error('HTTP '+res.status);
     closeModal('modal-add-booking');
-    showToast('Booking added ✓');
-    // Refresh reservations so new booking appears immediately
+    showToast(_editBookingId?'Booking updated ✓':'Booking added ✓');
     await refreshReservations();
   }catch(e){
-    btn.disabled=false; btn.textContent='Add Booking';
+    btn.disabled=false;
+    btn.textContent=_editBookingId?'Save Changes':'Add Booking';
     showToast('Could not save — check connection');
   }
 }

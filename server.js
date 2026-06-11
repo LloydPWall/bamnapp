@@ -6,6 +6,7 @@ const fs      = require('fs');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 const POLL = parseInt(process.env.POLL_INTERVAL || '120000'); // ms — default 2 min
+const APP_VERSION = '2.8.2';
 
 // ── DATA SOURCES ──────────────────────────────────────────────────────────────
 const SECRET = process.env.SECRET || '1300';
@@ -150,6 +151,42 @@ app.get('/api/reservations', (req, res) => {
   res.send(sheetsText + '\n' + localRows);
 });
 
+// Bookings GET — local-only bookings as JSON (for edit/delete UI)
+app.get('/api/bookings', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(readLocalBookings());
+});
+
+// Bookings DELETE
+app.delete('/api/bookings/:id', (req, res) => {
+  const bookings = readLocalBookings();
+  const idx = bookings.findIndex(b => b.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  bookings.splice(idx, 1);
+  writeLocalBookings(bookings);
+  broadcast('reservations');
+  console.log(`[booking] deleted: ${req.params.id}`);
+  res.json({ ok: true });
+});
+
+// Bookings PATCH — edit an existing local booking
+app.patch('/api/bookings/:id', (req, res) => {
+  const bookings = readLocalBookings();
+  const idx = bookings.findIndex(b => b.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  const { date, time, name, guests, contact, notes } = req.body || {};
+  if (date)              bookings[idx].date    = date;
+  if (time  !== undefined) bookings[idx].time  = time;
+  if (name)              bookings[idx].name    = name.trim();
+  if (guests !== undefined) bookings[idx].guests = String(guests);
+  if (contact !== undefined) bookings[idx].contact = (contact || '').trim();
+  if (notes  !== undefined) bookings[idx].notes   = (notes  || '').trim();
+  writeLocalBookings(bookings);
+  broadcast('reservations');
+  console.log(`[booking] updated: ${req.params.id}`);
+  res.json({ ok: true, booking: bookings[idx] });
+});
+
 // Reservations POST — save a new booking locally and broadcast update
 app.post('/api/reservations', (req, res) => {
   const { date, time, name, guests, contact, notes } = req.body || {};
@@ -196,6 +233,12 @@ app.get('/api/weather', (req, res) => {
   res.setHeader('Content-Type',  'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
   res.send(cache.weather.text);
+});
+
+// Version — used by the app to detect stale caches and self-update
+app.get('/api/version', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ version: APP_VERSION });
 });
 
 // Health / status
