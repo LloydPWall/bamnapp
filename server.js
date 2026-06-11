@@ -1,6 +1,7 @@
 'use strict';
 const express = require('express');
 const path    = require('path');
+const fs      = require('fs');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +25,9 @@ const WEATHER_URL =
   '&daily=weather_code,temperature_2m_max' +
   '&timezone=Europe%2FBerlin&forecast_days=14';
 
+// Local bookings file (persisted via Docker volume)
+const LOCAL_RESV_FILE = path.join(__dirname, 'data', 'reservations.json');
+
 // ── IN-MEMORY CACHE ───────────────────────────────────────────────────────────
 const cache = {};
 for (const ch of [...Object.keys(SOURCES), 'weather']) {
@@ -40,6 +44,29 @@ function broadcast(channel) {
     try { res.write(msg); } catch { clients.delete(res); }
   }
   console.log(`[sse] ${channel} → ${clients.size} client(s)`);
+}
+
+// ── LOCAL BOOKINGS HELPERS ────────────────────────────────────────────────────
+function readLocalBookings() {
+  try {
+    if (!fs.existsSync(LOCAL_RESV_FILE)) return [];
+    return JSON.parse(fs.readFileSync(LOCAL_RESV_FILE, 'utf8'));
+  } catch { return []; }
+}
+
+function writeLocalBookings(bookings) {
+  fs.mkdirSync(path.dirname(LOCAL_RESV_FILE), { recursive: true });
+  fs.writeFileSync(LOCAL_RESV_FILE, JSON.stringify(bookings, null, 2));
+}
+
+// Convert a local booking object to a CSV row matching the Google Sheets format:
+// Day,Date,Name,Guests,Time,Contact,Notes  (Date = DD/MM/YY)
+function bookingToCSVRow(b) {
+  const d = new Date(b.date + 'T12:00:00');
+  const dayName = d.toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'Europe/Berlin' });
+  const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'Europe/Berlin' });
+  const fields = [dayName, dateStr, b.name, b.guests || '', b.time || '', b.contact || '', b.notes || ''];
+  return fields.map(f => (String(f).includes(',') ? `"${f}"` : f)).join(',');
 }
 
 // ── POLLING ───────────────────────────────────────────────────────────────────
@@ -77,6 +104,7 @@ async function pollAll() {
 }
 
 // ── ROUTES ────────────────────────────────────────────────────────────────────
+app.use(express.json());
 
 // SSE — real-time updates
 app.get('/api/events', (req, res) => {
@@ -100,8 +128,59 @@ app.get('/api/events', (req, res) => {
   });
 });
 
-// Data endpoints — one per source
+// Reservations GET — merges Google Sheets cache with locally-added bookings
+app.get('/api/reservations', (req, res) => {
+  const sheetsText = cache.reservations.text;
+  const localBookings = readLocalBookings();
+
+  res.setHeader('Content-Type',  'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+
+  if (!localBookings.length) {
+    if (!sheetsText) return res.status(503).send('Starting up — data not yet cached');
+    return res.send(sheetsText);
+  }
+
+  const localRows = localBookings.map(bookingToCSVRow).join('\n');
+
+  if (!sheetsText) {
+    return res.send('Day,Date,Name,Guests,Time,Contact,Notes\n' + localRows);
+  }
+
+  res.send(sheetsText + '\n' + localRows);
+});
+
+// Reservations POST — save a new booking locally and broadcast update
+app.post('/api/reservations', (req, res) => {
+  const { date, time, name, guests, contact, notes } = req.body || {};
+
+  if (!date || !name) {
+    return res.status(400).json({ error: 'date and name are required' });
+  }
+
+  const booking = {
+    id:      Date.now().toString(),
+    date,
+    time:    time    || '',
+    name:    name.trim(),
+    guests:  String(guests || '2'),
+    contact: (contact || '').trim(),
+    notes:   (notes   || '').trim(),
+  };
+
+  const bookings = readLocalBookings();
+  bookings.push(booking);
+  writeLocalBookings(bookings);
+
+  console.log(`[booking] added: ${booking.name} ${booking.date} ${booking.time} (${booking.guests} guests)`);
+  broadcast('reservations');
+
+  res.json({ ok: true, booking });
+});
+
+// Data endpoints — one per source (reservations handled above)
 for (const channel of Object.keys(SOURCES)) {
+  if (channel === 'reservations') continue; // custom route above
   app.get(`/api/${channel}`, (req, res) => {
     const data = cache[channel];
     if (!data.text) return res.status(503).send('Starting up — data not yet cached');
@@ -123,7 +202,8 @@ app.get('/api/weather', (req, res) => {
 app.get('/api/status', (req, res) => {
   const cacheStatus = {};
   for (const [ch, v] of Object.entries(cache)) cacheStatus[ch] = !!v.text;
-  res.json({ ok: true, clients: clients.size, cache: cacheStatus, ts: new Date().toISOString() });
+  const localCount = readLocalBookings().length;
+  res.json({ ok: true, clients: clients.size, cache: cacheStatus, localBookings: localCount, ts: new Date().toISOString() });
 });
 
 // Static files — serve the bamnapp frontend
